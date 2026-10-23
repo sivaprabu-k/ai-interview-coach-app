@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     app_name: str = "AI Interview Coach"
     app_version: str = "1.0.0"
     database_url: str = "postgresql+psycopg://postgres:password@localhost:5433/ai_interview_coach"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
 
     model_config = SettingsConfigDict(
         env_file=".env",
