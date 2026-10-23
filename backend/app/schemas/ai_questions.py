@@ -1,4 +1,4 @@
-
+from datetime import datetime
 from typing import Literal
 from pydantic import BaseModel, Field
 
@@ -19,3 +19,19 @@ class InterviewQuestion(BaseModel):
 class QuestionGenerationResponse(BaseModel):
     role: str
     questions: list[InterviewQuestion]
+
+
+class GeneratedQuestionHistory(BaseModel):
+    id: int
+    question: str
+    expected_answer_points: list[str]
+
+
+class QuestionGenerationHistoryResponse(BaseModel):
+    id: int
+    role: str
+    experience_years: int
+    skills: list[str]
+    difficulty: str
+    created_at: datetime
+    questions: list[GeneratedQuestionHistory]
