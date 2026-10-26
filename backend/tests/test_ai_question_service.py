@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+from pydantic import ValidationError
 import pytest
 
 from app.core.config import settings
@@ -88,4 +89,37 @@ def test_generate_questions_unexpected_question_count():
             ValueError,
             match="Gemini returned an unexpected number of questions",
         ):
+            service.generate_questions(request)
+
+
+
+def test_generate_questions_rejects_empty_answer_points():
+    request = QuestionGenerationRequest(
+        role="Python Developer",
+        experience_years=2,
+        skills=["Python", "FastAPI"],
+        difficulty="medium",
+        number_of_questions=1,
+    )
+
+    mock_response = MagicMock()
+    mock_response.text = json.dumps(
+        {
+            "role": "Python Developer",
+            "questions": [
+                {
+                    "question": "What is a Python decorator?",
+                    "expected_answer_points": [],
+                }
+            ],
+        }
+    )
+
+    with patch("app.services.ai.ai_question_service.genai.Client") as mock_client:
+        mock_client.return_value.models.generate_content.return_value = mock_response
+
+        service = AIQuestionService.__new__(AIQuestionService)
+        service.client = mock_client.return_value
+
+        with pytest.raises(ValidationError):
             service.generate_questions(request)
