@@ -1,8 +1,11 @@
+
 import json
 
 from google import genai
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.models.answer_evaluation import AnswerEvaluation
 from app.schemas.answer_evaluation import (
     AnswerEvaluationRequest,
     AnswerEvaluationResponse,
@@ -19,6 +22,8 @@ class AnswerEvaluationService:
     def evaluate_answer(
         self,
         request: AnswerEvaluationRequest,
+        db: Session,
+        generated_question_id: int | None = None,
     ) -> AnswerEvaluationResponse:
         prompt = f"""
 Evaluate the candidate's interview answer fairly and objectively.
@@ -76,4 +81,25 @@ Use empty arrays when there are no strengths or improvements to list.
                 f"Response preview: {response_text[:300]!r}"
             ) from exc
 
-        return AnswerEvaluationResponse.model_validate(data)
+        result = AnswerEvaluationResponse.model_validate(data)
+
+        evaluation = AnswerEvaluation(
+            generated_question_id=generated_question_id,
+            question=request.question,
+            expected_answer_points=request.expected_answer_points,
+            user_answer=request.user_answer,
+            score=result.score,
+            strengths=result.strengths,
+            areas_to_improve=result.areas_to_improve,
+            suggested_answer=result.suggested_answer,
+            feedback=result.feedback,
+        )
+
+        try:
+            db.add(evaluation)
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+        return result

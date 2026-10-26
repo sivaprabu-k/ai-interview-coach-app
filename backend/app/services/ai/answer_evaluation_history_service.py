@@ -1,0 +1,21 @@
+from sqlalchemy.orm import Session
+from app.models.answer_evaluation import AnswerEvaluation
+
+
+class AnswerEvaluationHistoryService:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def get_evaluation_history(
+        self,
+        evaluation_id: int | None = None,
+    ) -> list[AnswerEvaluation]:
+        query = self.db.query(AnswerEvaluation)
+
+        if evaluation_id is not None:
+            query = query.filter(AnswerEvaluation.id == evaluation_id)
+
+        return query.order_by(
+            AnswerEvaluation.created_at.desc(),
+            AnswerEvaluation.id.desc(),
+        ).all()
