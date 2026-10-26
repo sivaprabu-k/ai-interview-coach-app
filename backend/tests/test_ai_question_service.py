@@ -123,3 +123,28 @@ def test_generate_questions_rejects_empty_answer_points():
 
         with pytest.raises(ValidationError):
             service.generate_questions(request)
+
+
+def test_generate_questions_invalid_json():
+    request = QuestionGenerationRequest(
+        role="Python Developer",
+        experience_years=2,
+        skills=["Python", "FastAPI"],
+        difficulty="medium",
+        number_of_questions=1,
+    )
+
+    mock_response = MagicMock()
+    mock_response.text = "This is not valid JSON"
+
+    with patch("app.services.ai.ai_question_service.genai.Client") as mock_client:
+        mock_client.return_value.models.generate_content.return_value = mock_response
+
+        service = AIQuestionService.__new__(AIQuestionService)
+        service.client = mock_client.return_value
+
+        with pytest.raises(
+            RuntimeError,
+            match="Gemini returned invalid JSON",
+        ):
+            service.generate_questions(request)
