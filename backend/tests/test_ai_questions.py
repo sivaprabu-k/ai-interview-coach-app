@@ -166,3 +166,17 @@ def test_get_question_generation_history_not_found(client):
     assert body["status"] is False
     assert body["data"] == {}
     assert body["message"] == "Question generation history not found"
+
+def test_generate_questions_rejects_whitespace_skill(client):
+    response = client.post(
+        "/api/v1/ai-questions/generate",
+        json={
+            "role": "Python Developer",
+            "experience_years": 2,
+            "skills": ["Python", "   "],
+            "difficulty": "medium",
+            "number_of_questions": 2,
+        },
+    )
+
+    assert response.status_code == 422
