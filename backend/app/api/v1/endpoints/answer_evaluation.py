@@ -70,3 +70,31 @@ def get_answer_evaluation_history(
         status_code=status.HTTP_200_OK,
         status_message="Answer evaluation history retrieved successfully",
     )
+
+
+@router.get("/answer-evaluations/{evaluation_id}")
+def get_answer_evaluation_by_id(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+):
+    service = AnswerEvaluationHistoryService(db)
+    evaluation = service.get_evaluation_by_id(evaluation_id)
+
+    if evaluation is None:
+        return global_response_format(
+            status_value=False,
+            data={},
+            status_code=status.HTTP_404_NOT_FOUND,
+            status_message="Answer evaluation not found",
+        )
+
+    data = AnswerEvaluationHistoryItem.model_validate(
+        evaluation
+    ).model_dump(mode="json")
+
+    return global_response_format(
+        status_value=True,
+        data=data,
+        status_code=status.HTTP_200_OK,
+        status_message="Answer evaluation retrieved successfully",
+    )

@@ -26,3 +26,13 @@ class AnswerEvaluationHistoryService:
             .limit(limit)
             .all()
         )
+
+    def get_evaluation_by_id(
+        self,
+        evaluation_id: int,
+    ) -> AnswerEvaluation | None:
+        return (
+            self.db.query(AnswerEvaluation)
+            .filter(AnswerEvaluation.id == evaluation_id)
+            .first()
+        )
