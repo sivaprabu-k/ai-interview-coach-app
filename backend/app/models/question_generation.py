@@ -46,4 +46,4 @@ class QuestionGeneration(Base):
         index=True,
     )
 
-    interview = relationship("Interview")
+    interview = relationship("Interview", back_populates="question_generations",)

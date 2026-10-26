@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from app.schemas.ai_questions import QuestionGenerationHistoryResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -18,3 +18,8 @@ class InterviewResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class InterviewDetailsResponse(InterviewResponse):
+    question_generations: list[QuestionGenerationHistoryResponse] = Field(
+        default_factory=list
+    )

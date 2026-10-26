@@ -383,3 +383,118 @@ def test_interview_count_decreases_after_soft_delete(client):
     final_data = after_delete.json()["data"]
 
     assert final_data["total"] == initial_count - 1
+
+
+def test_get_interview_includes_question_generations(client):
+    create_response = client.post(
+        "/api/v1/interviews",
+        json={
+            "role": "Python Developer",
+            "difficulty": "medium",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    interview_id = create_response.json()["data"].get("id")
+
+    if interview_id is None:
+        list_response = client.get("/api/v1/interviews")
+        interviews = list_response.json()["data"]["interviews"]
+        interview_id = next(
+            item["id"]
+            for item in interviews
+            if item["role"] == "Python Developer"
+        )
+
+    response = client.get(f"/api/v1/interviews/{interview_id}")
+
+    assert response.status_code == 200
+
+    result = response.json()
+    assert result["status"] is True
+    assert "question_generations" in result["data"]
+    assert isinstance(result["data"]["question_generations"], list)
+
+
+def test_interview_details_includes_generated_questions(
+    client, monkeypatch
+):
+    from app.api.v1.endpoints import ai_questions
+    from app.schemas.ai_questions import (
+        QuestionGenerationResponse,
+        InterviewQuestion,
+    )
+
+    create_response = client.post(
+        "/api/v1/interviews",
+        json={
+            "role": "Python Developer",
+            "difficulty": "medium",
+        },
+    )
+    assert create_response.status_code == 201
+
+    interview_id = create_response.json()["data"].get("id")
+
+    if interview_id is None:
+        interviews_response = client.get("/api/v1/interviews")
+        interviews = interviews_response.json()["data"]["interviews"]
+        interview_id = next(
+            item["id"]
+            for item in interviews
+            if item["role"] == "Python Developer"
+        )
+
+    def fake_generate_questions(self, request):
+        return QuestionGenerationResponse(
+            role=request.role,
+            questions=[
+                InterviewQuestion(
+                    question="What is a Python decorator?",
+                    expected_answer_points=[
+                        "A function that wraps another function",
+                        "Uses the @ syntax",
+                    ],
+                )
+            ],
+        )
+
+    monkeypatch.setattr(
+        ai_questions.AIQuestionService,
+        "generate_questions",
+        fake_generate_questions,
+    )
+
+    generation_response = client.post(
+        "/api/v1/ai-questions/generate",
+        json={
+            "role": "Python Developer",
+            "experience_years": 2,
+            "skills": ["Python", "FastAPI"],
+            "difficulty": "medium",
+            "interview_id": interview_id,
+            "number_of_questions": 1,
+        },
+    )
+
+    assert generation_response.status_code == 200
+    assert generation_response.json()["status"] is True
+
+    details_response = client.get(
+        f"/api/v1/interviews/{interview_id}"
+    )
+    assert details_response.status_code == 200
+
+    details = details_response.json()["data"]
+    generations = details["question_generations"]
+
+    assert len(generations) == 1
+    assert generations[0]["interview_id"] == interview_id
+    assert generations[0]["questions"][0]["question"] == (
+        "What is a Python decorator?"
+    )
+    assert generations[0]["questions"][0]["expected_answer_points"] == [
+        "A function that wraps another function",
+        "Uses the @ syntax",
+    ]

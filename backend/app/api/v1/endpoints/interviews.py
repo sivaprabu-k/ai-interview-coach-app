@@ -7,6 +7,7 @@ from app.schemas.interview import(
 InterviewCreate,
 InterviewResponse,
 InterviewUpdate,
+InterviewDetailsResponse
 )
 from app.services.interview_service import(
 create_interview,
@@ -90,9 +91,13 @@ def retrieve_interview(
             status_message="Interview not found",
         )
 
-    data = InterviewResponse.model_validate(interview).model_dump(
-        mode="json"
-    )
+    data = InterviewDetailsResponse(
+        **InterviewResponse.model_validate(interview).model_dump(),
+        question_generations=[
+            generation
+            for generation in interview.question_generations
+        ],
+    ).model_dump(mode="json")
 
     return global_response_format(
         status_value=True,

@@ -39,12 +39,19 @@ class GeneratedQuestionHistory(BaseModel):
     question: str
     expected_answer_points: list[str]
 
+    model_config = ConfigDict(from_attributes=True)
+
+
 
 class QuestionGenerationHistoryResponse(BaseModel):
     id: int
+    interview_id: int | None = None
     role: str
     experience_years: int
     skills: list[str]
     difficulty: str
     created_at: datetime
     questions: list[GeneratedQuestionHistory]
+
+    model_config = ConfigDict(from_attributes=True)
+

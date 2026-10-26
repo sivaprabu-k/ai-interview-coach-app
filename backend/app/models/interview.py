@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Integer, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.database import Base
 
@@ -32,4 +32,9 @@ class Interview(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+    question_generations = relationship(
+        "QuestionGeneration",
+        back_populates="interview",
+        cascade="save-update, merge",
     )
