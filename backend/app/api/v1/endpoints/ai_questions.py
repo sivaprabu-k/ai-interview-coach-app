@@ -1,11 +1,11 @@
 import logging
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models import GeneratedQuestion, QuestionGeneration
+from app.models.interview import Interview
 from app.schemas.ai_questions import(
 QuestionGenerationRequest,
-QuestionGenerationHistoryResponse,
 QuestionGenerationRequest,
 ) 
 from app.services.ai.question_history_service import QuestionHistoryService
@@ -26,10 +26,29 @@ def generate_questions(
     db: Session = Depends(get_db),
 ):
     try:
+        if request.interview_id is not None:
+            interview = (
+                db.query(Interview)
+                .filter(
+                    Interview.id == request.interview_id,
+                    Interview.is_deleted.is_(False),
+                )
+                .first()
+            )
+
+            if interview is None:
+                return global_response_format(
+                    status_value=False,
+                    data={},
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    status_message="Interview not found",
+                )
+            
         service = AIQuestionService()
         result = service.generate_questions(request)
 
         generation = QuestionGeneration(
+            interview_id=request.interview_id,
             role=request.role,
             experience_years=request.experience_years,
             skills=request.skills,
@@ -74,6 +93,63 @@ def generate_questions(
             status_code=status.HTTP_502_BAD_GATEWAY,
             status_message="AI question generation failed",
         )
+
+
+@router.get(
+    "/ai-questions/history",
+    status_code=status.HTTP_200_OK,
+)
+def get_question_generation_history_list(
+    interview_id: int | None = Query(default=None, ge=1),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    query = db.query(QuestionGeneration)
+
+    if interview_id is not None:
+        query = query.filter(
+            QuestionGeneration.interview_id == interview_id
+        )
+
+    generations = (
+        query.order_by(QuestionGeneration.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    data = [
+        {
+            "id": generation.id,
+            "interview_id": generation.interview_id,
+            "role": generation.role,
+            "experience_years": generation.experience_years,
+            "skills": generation.skills,
+            "difficulty": generation.difficulty,
+            "created_at": (
+                generation.created_at.isoformat()
+                if generation.created_at
+                else None
+            ),
+            "questions": [
+                {
+                    "id": question.id,
+                    "question": question.question,
+                    "expected_answer_points": question.expected_answer_points,
+                }
+                for question in generation.questions
+            ],
+        }
+        for generation in generations
+    ]
+
+    return global_response_format(
+        status_value=True,
+        data=data,
+        status_code=status.HTTP_200_OK,
+        status_message="Question generation history retrieved successfully",
+    )
 
 
 @router.get(
