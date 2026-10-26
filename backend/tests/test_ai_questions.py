@@ -5,7 +5,7 @@ from app.schemas.ai_questions import (
     QuestionGenerationResponse,
     InterviewQuestion,
 )
-
+from app.models.interview import Interview
 
 
 @patch("app.api.v1.endpoints.ai_questions.AIQuestionService")
@@ -179,4 +179,201 @@ def test_generate_questions_rejects_whitespace_skill(client):
         },
     )
 
+    assert response.status_code == 422
+
+
+@patch("app.api.v1.endpoints.ai_questions.AIQuestionService")
+def test_generate_questions_links_to_interview(
+    mock_service_class,
+    client,
+    db_session,
+):
+    mock_service = MagicMock()
+    mock_service_class.return_value = mock_service
+
+    mock_service.generate_questions.return_value = (
+        QuestionGenerationResponse(
+            role="Python Developer",
+            questions=[
+                InterviewQuestion(
+                    question="What is Python?",
+                    expected_answer_points=["A programming language"],
+                )
+            ],
+        )
+    )
+
+    interview = Interview(
+        role="Python Developer",
+        difficulty="medium",
+    )
+    db_session.add(interview)
+    db_session.commit()
+    db_session.refresh(interview)
+
+    response = client.post(
+        "/api/v1/ai-questions/generate",
+        json={
+            "role": "Python Developer",
+            "experience_years": 2,
+            "skills": ["Python"],
+            "difficulty": "medium",
+            "number_of_questions": 1,
+            "interview_id": interview.id,
+        },
+    )
+
+    assert response.status_code == 200
+
+    generation = db_session.query(QuestionGeneration).one()
+    assert generation.interview_id == interview.id
+
+
+@patch("app.api.v1.endpoints.ai_questions.AIQuestionService")
+def test_generate_questions_interview_not_found(
+    mock_service_class,
+    client,
+    db_session,
+):
+    response = client.post(
+        "/api/v1/ai-questions/generate",
+        json={
+            "role": "Python Developer",
+            "experience_years": 2,
+            "skills": ["Python"],
+            "difficulty": "medium",
+            "number_of_questions": 1,
+            "interview_id": 99999,
+        },
+    )
+
+    assert response.status_code == 404
+    mock_service_class.assert_not_called()
+    assert db_session.query(QuestionGeneration).count() == 0
+
+
+@patch("app.api.v1.endpoints.ai_questions.AIQuestionService")
+def test_generate_questions_rejects_deleted_interview(
+    mock_service_class,
+    client,
+    db_session,
+):
+    interview = Interview(
+        role="Python Developer",
+        difficulty="medium",
+        is_deleted=True,
+    )
+    db_session.add(interview)
+    db_session.commit()
+    db_session.refresh(interview)
+
+    response = client.post(
+        "/api/v1/ai-questions/generate",
+        json={
+            "role": "Python Developer",
+            "experience_years": 2,
+            "skills": ["Python"],
+            "difficulty": "medium",
+            "number_of_questions": 1,
+            "interview_id": interview.id,
+        },
+    )
+
+    assert response.status_code == 404
+    mock_service_class.assert_not_called()
+    assert db_session.query(QuestionGeneration).count() == 0
+
+
+def test_get_question_generation_history_filtered_by_interview(
+    client,
+    db_session,
+):
+    interview = Interview(
+        role="Python Developer",
+        difficulty="medium",
+    )
+    db_session.add(interview)
+    db_session.commit()
+    db_session.refresh(interview)
+
+    linked_generation = QuestionGeneration(
+        interview_id=interview.id,
+        role="Python Developer",
+        experience_years=2,
+        skills=["Python"],
+        difficulty="medium",
+    )
+
+    unrelated_generation = QuestionGeneration(
+        role="Java Developer",
+        experience_years=3,
+        skills=["Java"],
+        difficulty="hard",
+    )
+
+    db_session.add_all([linked_generation, unrelated_generation])
+    db_session.commit()
+
+    response = client.get(
+        f"/api/v1/ai-questions/history?interview_id={interview.id}"
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+    generations = body["data"]
+
+    assert len(generations) == 1
+    assert generations[0]["interview_id"] == interview.id
+    assert generations[0]["role"] == "Python Developer"
+
+
+def test_get_question_generation_history_pagination(
+    client,
+    db_session,
+):
+    generations = [
+        QuestionGeneration(
+            role=f"Developer {i}",
+            experience_years=2,
+            skills=["Python"],
+            difficulty="medium",
+        )
+        for i in range(3)
+    ]
+
+    db_session.add_all(generations)
+    db_session.commit()
+
+    response = client.get(
+        "/api/v1/ai-questions/history?skip=0&limit=2"
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+    assert len(body["data"]) == 2
+
+
+def test_get_question_generation_history_rejects_invalid_pagination(
+    client,
+):
+    response = client.get(
+        "/api/v1/ai-questions/history?skip=-1"
+    )
+    assert response.status_code == 422
+
+    response = client.get(
+        "/api/v1/ai-questions/history?limit=0"
+    )
+    assert response.status_code == 422
+
+    response = client.get(
+        "/api/v1/ai-questions/history?limit=101"
+    )
+    assert response.status_code == 422
+
+    response = client.get(
+        "/api/v1/ai-questions/history?interview_id=0"
+    )
     assert response.status_code == 422

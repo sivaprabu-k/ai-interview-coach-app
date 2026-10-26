@@ -10,6 +10,7 @@ class QuestionGenerationRequest(BaseModel):
     experience_years: int = Field(ge=0, le=50)
     skills: list[str] = Field(min_length=1, max_length=20)
     difficulty: Literal["easy", "medium", "hard"] = "medium"
+    interview_id: int | None = Field(default=None, ge=1)
     number_of_questions: int = Field(default=5, ge=1, le=10)
 
     @field_validator("skills")

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import DateTime, Integer, JSON, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.database import Base
 
@@ -39,3 +39,11 @@ class QuestionGeneration(Base):
         back_populates="generation",
         cascade="all, delete-orphan",
     )
+
+    interview_id: Mapped[int | None] = mapped_column(
+        ForeignKey("interviews.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    interview = relationship("Interview")
