@@ -1,6 +1,4 @@
-
 import json
-
 from google import genai
 from sqlalchemy.orm import Session
 

@@ -1,8 +1,5 @@
-
 import json
-
 from google import genai
-
 from app.core.config import settings
 from app.schemas.ai_questions import (
     InterviewQuestion,

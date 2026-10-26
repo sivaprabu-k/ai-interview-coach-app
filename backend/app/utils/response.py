@@ -1,7 +1,6 @@
 from typing import Any
 from fastapi.responses import JSONResponse
 
-
 def global_response_format(
     status_value: bool,
     data: Any,
