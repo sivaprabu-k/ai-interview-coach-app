@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
@@ -58,3 +57,61 @@ def test_get_answer_evaluation_history_empty(
     body = response.json()
     assert body["status"] is True
     assert body["data"] == []
+
+
+@patch(
+    "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationHistoryService"
+)
+def test_get_history_accepts_custom_pagination(
+    mock_service_class, client
+):
+    mock_service = MagicMock()
+    mock_service_class.return_value = mock_service
+    mock_service.get_evaluation_history.return_value = []
+
+    response = client.get(
+        "/api/v1/answer-evaluations?skip=0&limit=2"
+    )
+
+    assert response.status_code == 200
+    mock_service.get_evaluation_history.assert_called_once_with(
+        skip=0,
+        limit=2,
+    )
+
+
+@patch(
+    "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationHistoryService"
+)
+def test_get_history_accepts_next_page(
+    mock_service_class, client
+):
+    mock_service = MagicMock()
+    mock_service_class.return_value = mock_service
+    mock_service.get_evaluation_history.return_value = []
+
+    response = client.get(
+        "/api/v1/answer-evaluations?skip=2&limit=2"
+    )
+
+    assert response.status_code == 200
+    mock_service.get_evaluation_history.assert_called_once_with(
+        skip=2,
+        limit=2,
+    )
+
+
+def test_get_history_rejects_negative_skip(client):
+    response = client.get(
+        "/api/v1/answer-evaluations?skip=-1&limit=2"
+    )
+
+    assert response.status_code == 422
+
+
+def test_get_history_rejects_limit_above_maximum(client):
+    response = client.get(
+        "/api/v1/answer-evaluations?skip=0&limit=101"
+    )
+
+    assert response.status_code == 422

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -47,10 +47,15 @@ def evaluate_answer_endpoint(
 
 @router.get("/answer-evaluations")
 def get_answer_evaluation_history(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     service = AnswerEvaluationHistoryService(db)
-    evaluations = service.get_evaluation_history()
+    evaluations = service.get_evaluation_history(
+        skip=skip,
+        limit=limit,
+    )
 
     data = [
         AnswerEvaluationHistoryItem.model_validate(
@@ -65,4 +70,3 @@ def get_answer_evaluation_history(
         status_code=status.HTTP_200_OK,
         status_message="Answer evaluation history retrieved successfully",
     )
-
