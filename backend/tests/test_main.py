@@ -570,3 +570,70 @@ def test_question_generation_history_filters_by_interview_id(client, monkeypatch
     assert len(result["data"]) == 1
     assert result["data"][0]["interview_id"] == interview_ids[0]
     assert result["data"][0]["role"] == "Python Developer"
+
+
+def test_question_generation_history_pagination(client, monkeypatch):
+    from app.api.v1.endpoints import ai_questions
+    from app.schemas.ai_questions import (
+        QuestionGenerationResponse,
+        InterviewQuestion,
+    )
+
+    def fake_generate_questions(self, request):
+        return QuestionGenerationResponse(
+            role=request.role,
+            questions=[
+                InterviewQuestion(
+                    question=f"Question for {request.role}",
+                    expected_answer_points=["Expected answer"],
+                )
+            ],
+        )
+
+    monkeypatch.setattr(
+        ai_questions.AIQuestionService,
+        "generate_questions",
+        fake_generate_questions,
+    )
+
+    for role in ["Python Developer", "Backend Developer"]:
+        create_response = client.post(
+            "/api/v1/interviews",
+            json={"role": role, "difficulty": "medium"},
+        )
+        assert create_response.status_code == 201
+
+        interview_id = create_response.json()["data"].get("id")
+
+        if interview_id is None:
+            list_response = client.get("/api/v1/interviews")
+            interviews = list_response.json()["data"]["interviews"]
+            interview_id = next(
+                item["id"]
+                for item in interviews
+                if item["role"] == role
+            )
+
+        generation_response = client.post(
+            "/api/v1/ai-questions/generate",
+            json={
+                "role": role,
+                "experience_years": 2,
+                "skills": ["Python"],
+                "difficulty": "medium",
+                "interview_id": interview_id,
+                "number_of_questions": 1,
+            },
+        )
+        assert generation_response.status_code == 200
+
+    response = client.get(
+        "/api/v1/ai-questions/history",
+        params={"limit": 1, "skip": 0},
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+    assert result["status"] is True
+    assert len(result["data"]) == 1
