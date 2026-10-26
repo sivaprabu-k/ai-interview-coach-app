@@ -32,9 +32,18 @@ async def validation_exception_handler(
     request: Request,
     exc: RequestValidationError,
 ) -> JSONResponse:
+    errors = [
+        {
+            "type": error.get("type"),
+            "loc": error.get("loc"),
+            "msg": error.get("msg"),
+        }
+        for error in exc.errors()
+    ]
+
     return global_response_format(
         status_value=False,
-        data={"errors": exc.errors()},
+        data={"errors": errors},
         status_code=422,
         status_message="Request validation failed",
     )
