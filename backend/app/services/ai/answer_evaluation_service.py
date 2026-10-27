@@ -24,6 +24,7 @@ class AnswerEvaluationService:
         request: AnswerEvaluationRequest,
         db: Session,
         generated_question_id: int | None = None,
+        answer_attempt_id: int | None = None,
     ) -> AnswerEvaluationResponse:
         prompt = f"""
 Evaluate the candidate's interview answer fairly and objectively.
@@ -58,7 +59,11 @@ Use empty arrays when there are no strengths or improvements to list.
         response = self.client.models.generate_content(
             model=settings.gemini_model,
             contents=prompt,
+            config={
+                "response_mime_type": "application/json",
+            },
         )
+
         response_text = (response.text or "").strip()
 
         if response_text.startswith("```"):
@@ -83,20 +88,43 @@ Use empty arrays when there are no strengths or improvements to list.
 
         result = AnswerEvaluationResponse.model_validate(data)
 
-        evaluation = AnswerEvaluation(
-            generated_question_id=generated_question_id,
-            question=request.question,
-            expected_answer_points=request.expected_answer_points,
-            user_answer=request.user_answer,
-            score=result.score,
-            strengths=result.strengths,
-            areas_to_improve=result.areas_to_improve,
-            suggested_answer=result.suggested_answer,
-            feedback=result.feedback,
-        )
+        evaluation = None
+
+        if answer_attempt_id is not None:
+            evaluation = (
+                db.query(AnswerEvaluation)
+                .filter(
+                    AnswerEvaluation.answer_attempt_id == answer_attempt_id
+                )
+                .first()
+            )
+
+        if evaluation is None:
+            evaluation = AnswerEvaluation(
+                answer_attempt_id=answer_attempt_id,
+                generated_question_id=generated_question_id,
+                question=request.question,
+                expected_answer_points=request.expected_answer_points,
+                user_answer=request.user_answer,
+                score=result.score,
+                strengths=result.strengths,
+                areas_to_improve=result.areas_to_improve,
+                suggested_answer=result.suggested_answer,
+                feedback=result.feedback,
+            )
+            db.add(evaluation)
+        else:
+            evaluation.generated_question_id = generated_question_id
+            evaluation.question = request.question
+            evaluation.expected_answer_points = request.expected_answer_points
+            evaluation.user_answer = request.user_answer
+            evaluation.score = result.score
+            evaluation.strengths = result.strengths
+            evaluation.areas_to_improve = result.areas_to_improve
+            evaluation.suggested_answer = result.suggested_answer
+            evaluation.feedback = result.feedback
 
         try:
-            db.add(evaluation)
             db.commit()
         except Exception:
             db.rollback()

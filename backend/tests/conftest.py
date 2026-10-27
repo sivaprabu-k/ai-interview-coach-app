@@ -40,13 +40,21 @@ def db_session():
     connection = test_engine.connect()
     transaction = connection.begin()
 
-    db = TestingSessionLocal(bind=connection)
+    TestingSession = sessionmaker(
+        bind=connection,
+        autocommit=False,
+        autoflush=False,
+        join_transaction_mode="create_savepoint",
+    )
+
+    db = TestingSession()
 
     try:
         yield db
     finally:
         db.close()
-        transaction.rollback()
+        if transaction.is_active:
+            transaction.rollback()
         connection.close()
 
 
