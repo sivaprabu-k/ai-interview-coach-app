@@ -51,6 +51,9 @@ for the candidate's experience and requested difficulty.
         response = self.client.models.generate_content(
             model=settings.gemini_model,
             contents=prompt,
+            config={
+                "response_mime_type": "application/json",
+            },
         )
         response_text = (response.text or "").strip()
 

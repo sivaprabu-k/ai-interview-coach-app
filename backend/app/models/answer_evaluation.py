@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, Text, func, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.database import Base
 
@@ -7,9 +7,21 @@ from app.db.database import Base
 class AnswerEvaluation(Base):
     __tablename__ = "answer_evaluations"
 
+    __table_args__ = (
+        UniqueConstraint(
+            "answer_attempt_id",
+            name="uq_answer_evaluation_attempt",
+        ),
+    )
+
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
+        index=True,
+    )
+    answer_attempt_id: Mapped[int | None] = mapped_column(
+        ForeignKey("answer_attempts.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
     generated_question_id: Mapped[int | None] = mapped_column(
@@ -56,3 +68,8 @@ class AnswerEvaluation(Base):
     )
 
     generated_question = relationship("GeneratedQuestion")
+
+    answer_attempt = relationship(
+        "AnswerAttempt",
+        back_populates="evaluation",
+    )
