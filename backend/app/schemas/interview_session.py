@@ -70,3 +70,34 @@ class AnswerEvaluationResponse(BaseModel):
 class AnswerSubmissionResponse(BaseModel):
     attempt: AnswerAttemptResponse
     evaluation: AnswerEvaluationResponse | None = None
+
+class SessionEvaluationResultResponse(BaseModel):
+    id: int
+    score: int
+    strengths: list[str]
+    areas_to_improve: list[str]
+    suggested_answer: str
+    feedback: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SessionAttemptResultResponse(AnswerAttemptResponse):
+    evaluation: SessionEvaluationResultResponse | None = None
+
+class SessionQuestionResultResponse(BaseModel):
+    question_id: int
+    question: str
+    expected_answer_points: list[str]
+    attempts: list[SessionAttemptResultResponse]
+    successful_attempts: int
+    total_attempts: int
+
+class InterviewSessionResultsResponse(InterviewSessionCreateResponse):
+    questions: list[SessionQuestionResultResponse]
+    total_questions: int
+    answered_questions: int
+    unanswered_questions: int
+    failed_evaluations: int
+    average_score: float | None = None

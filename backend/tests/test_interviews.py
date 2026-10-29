@@ -383,3 +383,17 @@ def test_interview_count_decreases_after_soft_delete(client):
     final_data = after_delete.json()["data"]
 
     assert final_data["total"] == initial_count - 1
+
+
+def test_get_interview_session_results_not_found(client):
+    response = client.get(
+        "/api/v1/sessions/999999/results"
+    )
+
+    assert response.status_code == 404
+
+    result = response.json()
+    assert result["status"] is False
+    assert result["data"] == {}
+    assert result["status_code"] == 404
+    assert result["message"] == "Interview session not found."

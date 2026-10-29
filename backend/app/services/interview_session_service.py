@@ -87,6 +87,153 @@ class InterviewSessionService:
 
         return session
 
+    
+    @staticmethod
+    def get_session_results(
+        session_id: int,
+        db: Session,
+    ) -> dict:
+        session = db.scalar(
+            select(InterviewSession)
+            .options(
+                selectinload(
+                    InterviewSession.generation
+                ).selectinload(
+                    QuestionGeneration.questions
+                ),
+                selectinload(
+                    InterviewSession.answer_attempts
+                ).selectinload(
+                    AnswerAttempt.evaluation
+                ),
+                selectinload(
+                    InterviewSession.answer_attempts
+                ).selectinload(
+                    AnswerAttempt.generated_question
+                ),
+            )
+            .where(InterviewSession.id == session_id)
+        )
+
+        if session is None:
+            raise ValueError("Interview session not found.")
+
+        questions = sorted(
+            session.generation.questions,
+            key=lambda question: question.id,
+        )
+
+        attempts_by_question: dict[int, list[AnswerAttempt]] = {}
+        for attempt in session.answer_attempts:
+            attempts_by_question.setdefault(
+                attempt.generated_question_id, []
+            ).append(attempt)
+
+        question_results = []
+        successful_scores = []
+        answered_questions = 0
+        failed_evaluations = 0
+
+        for question in questions:
+            attempts = sorted(
+                attempts_by_question.get(question.id, []),
+                key=lambda attempt: attempt.attempt_number,
+            )
+
+            successful_attempts = [
+                attempt
+                for attempt in attempts
+                if attempt.evaluation_status == "succeeded"
+            ]
+
+            if successful_attempts:
+                answered_questions += 1
+
+            failed_evaluations += sum(
+                attempt.evaluation_status == "failed"
+                for attempt in attempts
+            )
+
+            attempt_results = []
+            for attempt in attempts:
+                evaluation = attempt.evaluation
+
+                if (
+                    attempt.evaluation_status == "succeeded"
+                    and evaluation is not None
+                ):
+                    successful_scores.append(evaluation.score)
+
+                attempt_results.append(
+                    {
+                        "id": attempt.id,
+                        "generated_question_id": (
+                            attempt.generated_question_id
+                        ),
+                        "attempt_number": attempt.attempt_number,
+                        "user_answer": attempt.user_answer,
+                        "evaluation_status": (
+                            attempt.evaluation_status
+                        ),
+                        "submitted_at": attempt.submitted_at,
+                        "evaluation": (
+                            {
+                                "id": evaluation.id,
+                                "score": evaluation.score,
+                                "strengths": evaluation.strengths,
+                                "areas_to_improve": (
+                                    evaluation.areas_to_improve
+                                ),
+                                "suggested_answer": (
+                                    evaluation.suggested_answer
+                                ),
+                                "feedback": evaluation.feedback,
+                                "created_at": evaluation.created_at,
+                            }
+                            if (
+                                attempt.evaluation_status == "succeeded"
+                                and evaluation is not None
+                            )
+                            else None
+                        ),
+                    }
+                )
+
+            question_results.append(
+                {
+                    "question_id": question.id,
+                    "question": question.question,
+                    "expected_answer_points": (
+                        question.expected_answer_points
+                    ),
+                    "attempts": attempt_results,
+                    "successful_attempts": len(successful_attempts),
+                    "total_attempts": len(attempts),
+                }
+            )
+
+        average_score = (
+            round(sum(successful_scores) / len(successful_scores), 2)
+            if successful_scores
+            else None
+        )
+
+        return {
+            "id": session.id,
+            "interview_id": session.interview_id,
+            "generation_id": session.generation_id,
+            "status": session.status,
+            "started_at": session.started_at,
+            "completed_at": session.completed_at,
+            "questions": question_results,
+            "total_questions": len(questions),
+            "answered_questions": answered_questions,
+            "unanswered_questions": len(questions) - answered_questions,
+            "failed_evaluations": failed_evaluations,
+            "average_score": average_score,
+        }
+
+
     @staticmethod
     def get_interview_sessions(
         interview_id: int,
