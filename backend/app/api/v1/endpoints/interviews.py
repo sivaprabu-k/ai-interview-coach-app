@@ -22,7 +22,8 @@ from app.schemas.interview_session import (
     AnswerSubmissionRequest,
     AnswerSubmissionResponse,
     InterviewSessionStartResponse,
-    InterviewSessionDetailResponse
+    InterviewSessionDetailResponse,
+    InterviewSessionResultsResponse
 )
 from app.services.interview_session_service import InterviewSessionService
 from app.utils.response import global_response_format
@@ -330,6 +331,36 @@ def get_interview_session_details(
         data=response_data.model_dump(mode="json"),
         status_code=status.HTTP_200_OK,
         status_message="Interview session details retrieved successfully",
+    )
+
+
+@router.get("/sessions/{session_id}/results")
+def get_interview_session_results(
+    session_id: int,
+    db: Session = Depends(get_db),
+):
+    try:
+        results = InterviewSessionService.get_session_results(
+            session_id=session_id,
+            db=db,
+        )
+    except ValueError as exc:
+        return global_response_format(
+            status_value=False,
+            data={},
+            status_code=status.HTTP_404_NOT_FOUND,
+            status_message=str(exc),
+        )
+
+    response_data = InterviewSessionResultsResponse.model_validate(
+        results
+    )
+
+    return global_response_format(
+        status_value=True,
+        data=response_data.model_dump(mode="json"),
+        status_code=status.HTTP_200_OK,
+        status_message="Interview session results retrieved successfully",
     )
 
 

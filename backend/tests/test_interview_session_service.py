@@ -409,3 +409,42 @@ def test_retry_evaluation_succeeds_after_failed_attempt(db_session):
     assert session.status == "completed"
     assert session.completed_at is not None
     assert evaluation is None
+
+
+def test_get_session_results_with_unanswered_questions(db_session):
+    interview, generation = create_interview_with_generation(db_session)
+
+    session = InterviewSessionService.create_session(
+        interview_id=interview.id,
+        db=db_session,
+    )
+
+    result = InterviewSessionService.get_session_results(
+        session_id=session.id,
+        db=db_session,
+    )
+
+    assert result["id"] == session.id
+    assert result["status"] == "in_progress"
+    assert result["total_questions"] == 1
+    assert result["answered_questions"] == 0
+    assert result["unanswered_questions"] == 1
+    assert result["failed_evaluations"] == 0
+    assert result["average_score"] is None
+
+    question_result = result["questions"][0]
+    assert question_result["question"] == "What is a Python decorator?"
+    assert question_result["attempts"] == []
+    assert question_result["successful_attempts"] == 0
+    assert question_result["total_attempts"] == 0
+
+
+def test_get_session_results_not_found(db_session):
+    with pytest.raises(
+        ValueError,
+        match="Interview session not found",
+    ):
+        InterviewSessionService.get_session_results(
+            session_id=999999,
+            db=db_session,
+        )
