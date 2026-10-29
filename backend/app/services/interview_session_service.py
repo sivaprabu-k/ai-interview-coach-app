@@ -21,10 +21,12 @@ class InterviewSessionService:
     def create_session(
         interview_id: int,
         db: Session,
+        user_id: int,
     ) -> InterviewSession:
         interview = db.scalar(
             select(Interview).where(
                 Interview.id == interview_id,
+                Interview.user_id == user_id,
                 Interview.is_deleted.is_(False),
             )
         )
@@ -64,6 +66,7 @@ class InterviewSessionService:
     def get_session_details(
         session_id: int,
         db: Session,
+        user_id: int,
     ) -> InterviewSession:
         session = db.scalar(
             select(InterviewSession)
@@ -79,7 +82,15 @@ class InterviewSessionService:
                     AnswerAttempt.evaluation
                 ),
             )
-            .where(InterviewSession.id == session_id)
+            .join(
+                Interview,
+                Interview.id == InterviewSession.interview_id,
+            )
+            .where(
+                InterviewSession.id == session_id,
+                Interview.user_id == user_id,
+                Interview.is_deleted.is_(False),
+            )
         )
 
         if session is None:
@@ -92,6 +103,7 @@ class InterviewSessionService:
     def get_session_results(
         session_id: int,
         db: Session,
+        user_id: int,
     ) -> dict:
         session = db.scalar(
             select(InterviewSession)
@@ -112,7 +124,15 @@ class InterviewSessionService:
                     AnswerAttempt.generated_question
                 ),
             )
-            .where(InterviewSession.id == session_id)
+            .join(
+                Interview,
+                Interview.id == InterviewSession.interview_id,
+            )
+            .where(
+                InterviewSession.id == session_id,
+                Interview.user_id == user_id,
+                Interview.is_deleted.is_(False),
+            )
         )
 
         if session is None:
@@ -238,10 +258,12 @@ class InterviewSessionService:
     def get_interview_sessions(
         interview_id: int,
         db: Session,
+        user_id: int,
     ) -> list[InterviewSession]:
         interview = db.scalar(
             select(Interview).where(
                 Interview.id == interview_id,
+                Interview.user_id == user_id,
                 Interview.is_deleted.is_(False),
             )
         )
@@ -266,6 +288,7 @@ class InterviewSessionService:
         generated_question_id: int,
         user_answer: str,
         db: Session,
+        user_id: int,
     ) -> tuple[AnswerAttempt, AnswerEvaluation | None]:
         session = db.scalar(
             select(InterviewSession)
@@ -276,7 +299,15 @@ class InterviewSessionService:
                     QuestionGeneration.questions
                 )
             )
-            .where(InterviewSession.id == session_id)
+            .join(
+                Interview,
+                Interview.id == InterviewSession.interview_id,
+            )
+            .where(
+                InterviewSession.id == session_id,
+                Interview.user_id == user_id,
+                Interview.is_deleted.is_(False),
+            )
         )
 
         if session is None:
@@ -390,10 +421,18 @@ class InterviewSessionService:
         session_id: int,
         attempt_id: int,
         db: Session,
+        user_id: int,
     ) -> tuple[AnswerAttempt, AnswerEvaluation | None]:
         session = db.scalar(
-            select(InterviewSession).where(
-                InterviewSession.id == session_id
+            select(InterviewSession)
+            .join(
+                Interview,
+                Interview.id == InterviewSession.interview_id,
+            )
+            .where(
+                InterviewSession.id == session_id,
+                Interview.user_id == user_id,
+                Interview.is_deleted.is_(False),
             )
         )
 
@@ -491,10 +530,17 @@ class InterviewSessionService:
 
     
     @staticmethod
-    def complete_session(session_id: int, db: Session) -> InterviewSession:
+    def complete_session(session_id: int, db: Session, user_id: int) -> InterviewSession:
         session = db.scalar(
-            select(InterviewSession).where(
-                InterviewSession.id == session_id
+            select(InterviewSession)
+            .join(
+                Interview,
+                Interview.id == InterviewSession.interview_id,
+            )
+            .where(
+                InterviewSession.id == session_id,
+                Interview.user_id == user_id,
+                Interview.is_deleted.is_(False),
             )
         )
 

@@ -9,6 +9,8 @@ from app.db.database import Base, get_db
 from app.main import app
 from app.models.interview import Interview
 
+from app.models import User
+from app.core.security import hash_password, create_access_token
 
 TEST_DATABASE_URL = (
     settings.database_url.rsplit("/", 1)[0]
@@ -69,3 +71,20 @@ def client(db_session):
         yield test_client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def auth_headers(db_session):
+    user = User(
+        name="Interview Test User",
+        email="interview-test@example.com",
+        hashed_password=hash_password("TestPass123!"),
+        is_active=True,
+    )
+
+    db_session.add(user)
+    db_session.flush()
+
+    token = create_access_token(subject=str(user.id))
+
+    return {"Authorization": f"Bearer {token}"}

@@ -27,18 +27,20 @@ def test_settings_reads_environment_variable(monkeypatch):
 
     assert test_settings.app_name == "Interview Coach Test"
 
+
 def test_database_connection(db_session):
     result = db_session.execute(text("SELECT 1")).scalar()
     assert result == 1
 
 
-def test_create_interview(client):
+def test_create_interview(client, auth_headers):
     response = client.post(
         "/api/v1/interviews",
         json={
             "role": "Python Developer",
             "difficulty": "medium",
         },
+        headers=auth_headers,
     )
 
     assert response.status_code == 201
@@ -51,44 +53,24 @@ def test_create_interview(client):
     assert result["message"] == "Interview created successfully"
 
 
-def test_create_interview_invalid_role(client):
+def test_create_interview_invalid_role(client, auth_headers):
     response = client.post(
         "/api/v1/interviews",
         json={
             "role": "A",
             "difficulty": "medium",
         },
+        headers=auth_headers,
     )
 
     assert response.status_code == 422
 
 
-def test_list_interviews_pagination(client):
+def test_list_interviews_pagination(client, auth_headers):
     response = client.get(
-        "/api/v1/interviews?skip=0&limit=5"
+        "/api/v1/interviews?skip=0&limit=5",
+        headers=auth_headers,
     )
-
-    assert response.status_code == 200
-
-    result = response.json()
-
-    assert result["status"] is True
-    assert result["status_code"] == 200
-    assert result["message"] == "Interviews retrieved successfully"
-    assert isinstance(result["data"], list)
-    assert len(result["data"]) <= 5
-
-
-def test_list_interviews_invalid_pagination(client):
-    response = client.get(
-        "/api/v1/interviews?skip=-1&limit=101"
-    )
-
-    assert response.status_code == 422
-
-
-def test_list_interviews_pagination(client):
-    response = client.get("/api/v1/interviews?skip=0&limit=5")
 
     assert response.status_code == 200
 
@@ -109,8 +91,20 @@ def test_list_interviews_pagination(client):
     assert len(data["interviews"]) <= 5
 
 
-def test_list_interviews_total_count(client):
-    response = client.get("/api/v1/interviews")
+def test_list_interviews_invalid_pagination(client, auth_headers):
+    response = client.get(
+        "/api/v1/interviews?skip=-1&limit=101",
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_list_interviews_total_count(client, auth_headers):
+    response = client.get(
+        "/api/v1/interviews",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
 
@@ -119,8 +113,11 @@ def test_list_interviews_total_count(client):
     assert data["total"] == len(data["interviews"])
 
 
-def test_get_interview_not_found(client):
-    response = client.get("/api/v1/interviews/9999")
+def test_get_interview_not_found(client, auth_headers):
+    response = client.get(
+        "/api/v1/interviews/9999",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 404
 
@@ -131,29 +128,37 @@ def test_get_interview_not_found(client):
     assert result["message"] == "Interview not found"
 
 
-def test_get_interview_by_id(client):
+def test_get_interview_by_id(client, auth_headers):
     create_response = client.post(
         "/api/v1/interviews",
         json={
             "role": "Python Developer",
             "difficulty": "Beginner",
         },
+        headers=auth_headers,
     )
 
     assert create_response.status_code == 201
 
     list_response = client.get(
-        "/api/v1/interviews?skip=0&limit=1"
+        "/api/v1/interviews?skip=0&limit=5",
+        headers=auth_headers,
     )
     assert list_response.status_code == 200
 
     interviews = list_response.json()["data"]["interviews"]
-    assert len(interviews) == 1
+    matching_interviews = [
+        item for item in interviews
+        if item["role"] == "Python Developer"
+        and item["difficulty"] == "Beginner"
+    ]
+    assert matching_interviews
 
-    interview_id = interviews[0]["id"]
+    interview_id = matching_interviews[-1]["id"]
 
     response = client.get(
-        f"/api/v1/interviews/{interview_id}"
+        f"/api/v1/interviews/{interview_id}",
+        headers=auth_headers,
     )
 
     assert response.status_code == 200
@@ -166,22 +171,32 @@ def test_get_interview_by_id(client):
     assert result["message"] == "Interview retrieved successfully"
 
 
-def test_update_interview(client):
+def test_update_interview(client, auth_headers):
     create_response = client.post(
         "/api/v1/interviews",
         json={
             "role": "Python Developer",
             "difficulty": "Beginner",
         },
+        headers=auth_headers,
     )
     assert create_response.status_code == 201
 
-    list_response = client.get("/api/v1/interviews?skip=0&limit=1")
-    interview_id = list_response.json()["data"]["interviews"][0]["id"]
+    list_response = client.get(
+        "/api/v1/interviews?skip=0&limit=5",
+        headers=auth_headers,
+    )
+    interviews = list_response.json()["data"]["interviews"]
+    interview_id = next(
+        item["id"] for item in reversed(interviews)
+        if item["role"] == "Python Developer"
+        and item["difficulty"] == "Beginner"
+    )
 
     update_response = client.put(
         f"/api/v1/interviews/{interview_id}",
         json={"difficulty": "Advanced"},
+        headers=auth_headers,
     )
 
     assert update_response.status_code == 200
@@ -194,10 +209,11 @@ def test_update_interview(client):
     assert result["message"] == "Interview updated successfully"
 
 
-def test_update_interview_not_found(client):
+def test_update_interview_not_found(client, auth_headers):
     response = client.put(
         "/api/v1/interviews/9999",
         json={"difficulty": "Advanced"},
+        headers=auth_headers,
     )
 
     assert response.status_code == 404
@@ -209,22 +225,32 @@ def test_update_interview_not_found(client):
     assert result["message"] == "Interview not found"
 
 
-def test_update_interview_null_field(client):
+def test_update_interview_null_field(client, auth_headers):
     create_response = client.post(
         "/api/v1/interviews",
         json={
             "role": "Python Developer",
             "difficulty": "Beginner",
         },
+        headers=auth_headers,
     )
     assert create_response.status_code == 201
 
-    list_response = client.get("/api/v1/interviews?skip=0&limit=1")
-    interview_id = list_response.json()["data"]["interviews"][0]["id"]
+    list_response = client.get(
+        "/api/v1/interviews?skip=0&limit=5",
+        headers=auth_headers,
+    )
+    interviews = list_response.json()["data"]["interviews"]
+    interview_id = next(
+        item["id"] for item in reversed(interviews)
+        if item["role"] == "Python Developer"
+        and item["difficulty"] == "Beginner"
+    )
 
     response = client.put(
         f"/api/v1/interviews/{interview_id}",
         json={"difficulty": None},
+        headers=auth_headers,
     )
 
     assert response.status_code == 422
@@ -235,22 +261,32 @@ def test_update_interview_null_field(client):
     assert result["message"] == "Fields cannot be null"
 
 
-def test_update_interview_empty_body(client):
+def test_update_interview_empty_body(client, auth_headers):
     create_response = client.post(
         "/api/v1/interviews",
         json={
             "role": "Python Developer",
             "difficulty": "Beginner",
         },
+        headers=auth_headers,
     )
     assert create_response.status_code == 201
 
-    list_response = client.get("/api/v1/interviews?skip=0&limit=1")
-    interview_id = list_response.json()["data"]["interviews"][0]["id"]
+    list_response = client.get(
+        "/api/v1/interviews?skip=0&limit=5",
+        headers=auth_headers,
+    )
+    interviews = list_response.json()["data"]["interviews"]
+    interview_id = next(
+        item["id"] for item in reversed(interviews)
+        if item["role"] == "Python Developer"
+        and item["difficulty"] == "Beginner"
+    )
 
     response = client.put(
         f"/api/v1/interviews/{interview_id}",
         json={},
+        headers=auth_headers,
     )
 
     assert response.status_code == 400
@@ -262,33 +298,46 @@ def test_update_interview_empty_body(client):
     assert result["message"] == "At least one field must be provided"
 
 
-def test_delete_interview_soft_delete(client):
+def test_delete_interview_soft_delete(client, auth_headers):
     create_response = client.post(
         "/api/v1/interviews",
         json={
             "role": "Python Developer",
             "difficulty": "Medium",
         },
+        headers=auth_headers,
     )
     assert create_response.status_code == 201
 
-    list_response = client.get("/api/v1/interviews")
+    list_response = client.get(
+        "/api/v1/interviews",
+        headers=auth_headers,
+    )
     interviews = list_response.json()["data"]["interviews"]
-    interview_id = interviews[0]["id"]
+    interview_id = next(
+        item["id"] for item in reversed(interviews)
+        if item["role"] == "Python Developer"
+        and item["difficulty"] == "Medium"
+    )
 
     delete_response = client.delete(
-        f"/api/v1/interviews/{interview_id}"
+        f"/api/v1/interviews/{interview_id}",
+        headers=auth_headers,
     )
     assert delete_response.status_code == 200
     assert delete_response.json()["status"] is True
     assert delete_response.json()["data"] == {}
 
     detail_response = client.get(
-        f"/api/v1/interviews/{interview_id}"
+        f"/api/v1/interviews/{interview_id}",
+        headers=auth_headers,
     )
     assert detail_response.status_code == 404
 
-    list_after_delete = client.get("/api/v1/interviews")
+    list_after_delete = client.get(
+        "/api/v1/interviews",
+        headers=auth_headers,
+    )
     remaining_ids = [
         item["id"]
         for item in list_after_delete.json()["data"]["interviews"]
@@ -296,60 +345,84 @@ def test_delete_interview_soft_delete(client):
     assert interview_id not in remaining_ids
 
 
-def test_delete_interview_not_found(client):
-    response = client.delete("/api/v1/interviews/999999")
+def test_delete_interview_not_found(client, auth_headers):
+    response = client.delete(
+        "/api/v1/interviews/999999",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 404
     assert response.json()["status"] is False
     assert response.json()["message"] == "Interview not found"
 
 
-def test_delete_interview_twice(client):
+def test_delete_interview_twice(client, auth_headers):
     create_response = client.post(
         "/api/v1/interviews",
         json={
             "role": "Python Developer",
             "difficulty": "Medium",
         },
+        headers=auth_headers,
     )
     assert create_response.status_code == 201
 
-    list_response = client.get("/api/v1/interviews")
-    interview_id = list_response.json()["data"]["interviews"][0]["id"]
+    list_response = client.get(
+        "/api/v1/interviews",
+        headers=auth_headers,
+    )
+    interviews = list_response.json()["data"]["interviews"]
+    interview_id = next(
+        item["id"] for item in reversed(interviews)
+        if item["role"] == "Python Developer"
+        and item["difficulty"] == "Medium"
+    )
 
     first_delete = client.delete(
-        f"/api/v1/interviews/{interview_id}"
+        f"/api/v1/interviews/{interview_id}",
+        headers=auth_headers,
     )
     assert first_delete.status_code == 200
 
     second_delete = client.delete(
-        f"/api/v1/interviews/{interview_id}"
+        f"/api/v1/interviews/{interview_id}",
+        headers=auth_headers,
     )
     assert second_delete.status_code == 404
 
 
-def test_update_deleted_interview_returns_404(client):
+def test_update_deleted_interview_returns_404(client, auth_headers):
     create_response = client.post(
         "/api/v1/interviews",
         json={
             "role": "Python Developer",
             "difficulty": "Medium",
         },
+        headers=auth_headers,
     )
     assert create_response.status_code == 201
 
-    list_response = client.get("/api/v1/interviews")
+    list_response = client.get(
+        "/api/v1/interviews",
+        headers=auth_headers,
+    )
     interviews = list_response.json()["data"]["interviews"]
-    interview_id = interviews[0]["id"]
+    interview_id = next(
+        item["id"] for item in reversed(interviews)
+        if item["role"] == "Python Developer"
+        and item["difficulty"] == "Medium"
+    )
 
     delete_response = client.delete(
-        f"/api/v1/interviews/{interview_id}"
+        f"/api/v1/interviews/{interview_id}",
+        headers=auth_headers,
     )
     assert delete_response.status_code == 200
 
     update_response = client.put(
         f"/api/v1/interviews/{interview_id}",
         json={"role": "Senior Python Developer"},
+        headers=auth_headers,
     )
 
     assert update_response.status_code == 404
@@ -357,8 +430,7 @@ def test_update_deleted_interview_returns_404(client):
     assert update_response.json()["message"] == "Interview not found"
 
 
-
-def test_interview_count_decreases_after_soft_delete(client):
+def test_interview_count_decreases_after_soft_delete(client, auth_headers):
     for role in ["Python Developer", "AI Engineer"]:
         response = client.post(
             "/api/v1/interviews",
@@ -366,28 +438,42 @@ def test_interview_count_decreases_after_soft_delete(client):
                 "role": role,
                 "difficulty": "Medium",
             },
+            headers=auth_headers,
         )
         assert response.status_code == 201
 
-    before_delete = client.get("/api/v1/interviews")
+    before_delete = client.get(
+        "/api/v1/interviews",
+        headers=auth_headers,
+    )
     before_data = before_delete.json()["data"]
     initial_count = before_data["total"]
-    interview_id = before_data["interviews"][0]["id"]
+
+    interview_id = next(
+        item["id"] for item in before_data["interviews"]
+        if item["role"] == "Python Developer"
+        and item["difficulty"] == "Medium"
+    )
 
     delete_response = client.delete(
-        f"/api/v1/interviews/{interview_id}"
+        f"/api/v1/interviews/{interview_id}",
+        headers=auth_headers,
     )
     assert delete_response.status_code == 200
 
-    after_delete = client.get("/api/v1/interviews")
+    after_delete = client.get(
+        "/api/v1/interviews",
+        headers=auth_headers,
+    )
     final_data = after_delete.json()["data"]
 
     assert final_data["total"] == initial_count - 1
 
 
-def test_get_interview_session_results_not_found(client):
+def test_get_interview_session_results_not_found(client, auth_headers):
     response = client.get(
-        "/api/v1/sessions/999999/results"
+        "/api/v1/sessions/999999/results",
+        headers=auth_headers,
     )
 
     assert response.status_code == 404
