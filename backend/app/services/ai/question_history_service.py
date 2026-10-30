@@ -6,9 +6,12 @@ class QuestionHistoryService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_generation_history(self, generation_id: int):
+    def get_generation_history(self, generation_id: int, user_id: int):
         return (
             self.db.query(QuestionGeneration)
-            .filter(QuestionGeneration.id == generation_id)
+            .filter(
+                QuestionGeneration.id == generation_id,
+                QuestionGeneration.user_id == user_id,
+            )
             .first()
         )

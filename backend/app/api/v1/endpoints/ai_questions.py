@@ -1,16 +1,14 @@
 import logging
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
+from app.api.dependencies import get_current_user
 from app.db.database import get_db
-from app.models import GeneratedQuestion, QuestionGeneration
+from app.models import GeneratedQuestion, QuestionGeneration, User
 from app.models.interview import Interview
-from app.schemas.ai_questions import(
-QuestionGenerationRequest,
-QuestionGenerationRequest,
-) 
-from app.services.ai.question_history_service import QuestionHistoryService
+from app.schemas.ai_questions import QuestionGenerationRequest
 from app.services.ai.ai_question_service import AIQuestionService
 from app.utils.response import global_response_format
+from app.services.ai.question_history_service import QuestionHistoryService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +22,7 @@ router = APIRouter()
 def generate_questions(
     request: QuestionGenerationRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         if request.interview_id is not None:
@@ -31,6 +30,7 @@ def generate_questions(
                 db.query(Interview)
                 .filter(
                     Interview.id == request.interview_id,
+                    Interview.user_id == current_user.id,
                     Interview.is_deleted.is_(False),
                 )
                 .first()
@@ -43,11 +43,12 @@ def generate_questions(
                     status_code=status.HTTP_404_NOT_FOUND,
                     status_message="Interview not found",
                 )
-            
+
         service = AIQuestionService()
         result = service.generate_questions(request)
 
         generation = QuestionGeneration(
+            user_id=current_user.id,
             interview_id=request.interview_id,
             role=request.role,
             experience_years=request.experience_years,
@@ -104,8 +105,11 @@ def get_question_generation_history_list(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    query = db.query(QuestionGeneration)
+    query = db.query(QuestionGeneration).filter(
+        QuestionGeneration.user_id == current_user.id
+    )
 
     if interview_id is not None:
         query = query.filter(
@@ -159,9 +163,14 @@ def get_question_generation_history_list(
 def get_question_generation_history(
     generation_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     service = QuestionHistoryService(db)
-    generation = service.get_generation_history(generation_id)
+
+    generation = service.get_generation_history(
+        generation_id=generation_id,
+        user_id=current_user.id,
+    )
 
     if generation is None:
         return global_response_format(

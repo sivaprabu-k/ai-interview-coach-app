@@ -57,16 +57,12 @@ for the candidate's experience and requested difficulty.
         )
         response_text = (response.text or "").strip()
 
-        # if not response.text:
-        #     raise ValueError("Gemini returned an empty response")
-
-        # Remove Markdown code fences, if Gemini returns them.
         if response_text.startswith("```"):
             lines = response_text.splitlines()
-            lines = lines[1:]  # Remove opening ```json
+            lines = lines[1:]
 
             if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]  # Remove closing ```
+                lines = lines[:-1]
 
             response_text = "\n".join(lines).strip()
 

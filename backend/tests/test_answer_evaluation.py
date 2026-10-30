@@ -5,7 +5,8 @@ from app.schemas.answer_evaluation import AnswerEvaluationResponse
 @patch(
     "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationService"
 )
-def test_evaluate_answer_success(mock_service_class, client):
+def test_evaluate_answer_success(mock_service_class, client, auth_headers,
+):
     mock_service = MagicMock()
     mock_service_class.return_value = mock_service
 
@@ -19,6 +20,7 @@ def test_evaluate_answer_success(mock_service_class, client):
 
     response = client.post(
         "/api/v1/answer-evaluations",
+        headers=auth_headers,
         json={
             "question": "What is a Python decorator?",
             "expected_answer_points": [
@@ -48,13 +50,18 @@ def test_evaluate_answer_success(mock_service_class, client):
 @patch(
     "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationService"
 )
-def test_evaluate_answer_configuration_error(mock_service_class, client):
+def test_evaluate_answer_configuration_error(
+    mock_service_class,
+    client,
+    auth_headers,
+):
     mock_service_class.side_effect = ValueError(
         "GEMINI_API_KEY is not configured"
     )
 
     response = client.post(
         "/api/v1/answer-evaluations",
+        headers=auth_headers,
         json={
             "question": "What is FastAPI?",
             "expected_answer_points": ["Python web framework"],
@@ -72,9 +79,10 @@ def test_evaluate_answer_configuration_error(mock_service_class, client):
     assert body["message"] == "GEMINI_API_KEY is not configured"
 
 
-def test_evaluate_answer_invalid_request(client):
+def test_evaluate_answer_invalid_request(client, auth_headers):
     response = client.post(
         "/api/v1/answer-evaluations",
+        headers=auth_headers,
         json={
             "question": "",
             "expected_answer_points": [],
@@ -88,7 +96,7 @@ def test_evaluate_answer_invalid_request(client):
 @patch(
     "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationService"
 )
-def test_evaluate_answer_gemini_failure(mock_service_class, client):
+def test_evaluate_answer_gemini_failure(mock_service_class, client, auth_headers):
     mock_service = MagicMock()
     mock_service_class.return_value = mock_service
     mock_service.evaluate_answer.side_effect = RuntimeError(
@@ -97,6 +105,7 @@ def test_evaluate_answer_gemini_failure(mock_service_class, client):
 
     response = client.post(
         "/api/v1/answer-evaluations",
+        headers=auth_headers,
         json={
             "question": "What is FastAPI?",
             "expected_answer_points": ["A Python web framework"],
@@ -105,6 +114,7 @@ def test_evaluate_answer_gemini_failure(mock_service_class, client):
     )
 
     assert response.status_code == 503
+
     body = response.json()
     assert body["status"] is False
     assert body["status_code"] == 503
