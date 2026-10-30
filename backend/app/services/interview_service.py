@@ -7,8 +7,10 @@ from app.schemas.interview import InterviewCreate, InterviewUpdate
 def create_interview(
     db: Session,
     interview_data: InterviewCreate,
+    user_id: int,
 ) -> Interview:
     interview = Interview(
+        user_id=user_id,
         role=interview_data.role,
         difficulty=interview_data.difficulty,
     )
@@ -22,12 +24,16 @@ def create_interview(
 
 def get_interviews(
     db: Session,
+    user_id: int,
     skip: int = 0,
     limit: int = 10,
 ) -> list[Interview]:
     return (
         db.query(Interview)
-        .filter(Interview.is_deleted.is_(False))
+        .filter(
+            Interview.user_id == user_id,
+            Interview.is_deleted.is_(False),
+        )
         .order_by(Interview.id.desc())
         .offset(skip)
         .limit(limit)
@@ -35,10 +41,13 @@ def get_interviews(
     )
 
 
-def get_interview_count(db: Session) -> int:
+def get_interview_count(db: Session, user_id: int) -> int:
     return (
         db.query(func.count(Interview.id))
-        .filter(Interview.is_deleted.is_(False))
+        .filter(
+            Interview.user_id == user_id,
+            Interview.is_deleted.is_(False),
+        )
         .scalar()
         or 0
     )
@@ -47,11 +56,13 @@ def get_interview_count(db: Session) -> int:
 def get_interview_by_id(
     db: Session,
     interview_id: int,
+    user_id: int,
 ) -> Interview | None:
     return (
         db.query(Interview)
         .filter(
             Interview.id == interview_id,
+            Interview.user_id == user_id,
             Interview.is_deleted.is_(False),
         )
         .first()

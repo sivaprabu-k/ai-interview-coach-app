@@ -4,6 +4,7 @@ from app.models.generated_question import GeneratedQuestion
 from app.models.answer_evaluation import AnswerEvaluation
 from app.models.interview_session import InterviewSession
 from app.models.answer_attempt import AnswerAttempt
+from app.models.user import User
 
 __all__ = [
     "Interview",
@@ -12,4 +13,5 @@ __all__ = [
     "AnswerEvaluation",
     "InterviewSession",
     "AnswerAttempt",
+    "User"
 ]

@@ -1,3 +1,5 @@
+from app.api.dependencies import get_current_user
+from app.models import User
 
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
@@ -39,8 +41,9 @@ router = APIRouter()
 def create_interview_endpoint(
     interview_data: InterviewCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    interview = create_interview(db, interview_data)
+    interview = create_interview(db, interview_data, user_id=current_user.id)
 
     interview_data_response = InterviewResponse.model_validate(interview)
 
@@ -57,9 +60,11 @@ def list_interviews(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     interviews = get_interviews(
         db=db,
+        user_id=current_user.id,
         skip=skip,
         limit=limit,
     )
@@ -69,7 +74,7 @@ def list_interviews(
             InterviewResponse.model_validate(interview).model_dump(mode="json")
             for interview in interviews
         ],
-        "total": get_interview_count(db),
+        "total": get_interview_count(db, user_id=current_user.id),
         "skip": skip,
         "limit": limit,
     }
@@ -86,10 +91,12 @@ def list_interviews(
 def retrieve_interview(
     interview_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     interview = get_interview_by_id(
         db=db,
         interview_id=interview_id,
+        user_id=current_user.id,
     )
 
     if interview is None:
@@ -117,10 +124,12 @@ def update_interview_endpoint(
     interview_id: int,
     interview_data: InterviewUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     interview = get_interview_by_id(
         db=db,
         interview_id=interview_id,
+        user_id=current_user.id,
     )
 
     if interview is None:
@@ -169,8 +178,9 @@ def update_interview_endpoint(
 def delete_interview_endpoint(
     interview_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    interview = get_interview_by_id(db, interview_id)
+    interview = get_interview_by_id(db, interview_id, user_id=current_user.id)
 
     if interview is None:
         return global_response_format(
@@ -197,11 +207,13 @@ def delete_interview_endpoint(
 def create_interview_session_endpoint(
     interview_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         session = InterviewSessionService.create_session(
             interview_id=interview_id,
             db=db,
+            user_id=current_user.id,
         )
     except ValueError as exc:
         message = str(exc)
@@ -249,11 +261,13 @@ def create_interview_session_endpoint(
 def get_interview_session_details(
     session_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         session = InterviewSessionService.get_session_details(
             session_id=session_id,
             db=db,
+            user_id=current_user.id,
         )
     except ValueError as exc:
         return global_response_format(
@@ -338,11 +352,13 @@ def get_interview_session_details(
 def get_interview_session_results(
     session_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         results = InterviewSessionService.get_session_results(
             session_id=session_id,
             db=db,
+            user_id=current_user.id,
         )
     except ValueError as exc:
         return global_response_format(
@@ -368,11 +384,13 @@ def get_interview_session_results(
 def get_interview_sessions_endpoint(
     interview_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         sessions = InterviewSessionService.get_interview_sessions(
             interview_id=interview_id,
             db=db,
+            user_id=current_user.id,
         )
     except ValueError as exc:
         return global_response_format(
@@ -410,6 +428,7 @@ def submit_interview_answer_endpoint(
     session_id: int,
     answer_data: AnswerSubmissionRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         attempt, evaluation = InterviewSessionService.submit_answer(
@@ -417,6 +436,7 @@ def submit_interview_answer_endpoint(
             generated_question_id=answer_data.generated_question_id,
             user_answer=answer_data.user_answer,
             db=db,
+            user_id=current_user.id,
         )
     except ValueError as exc:
         message = str(exc)
@@ -470,12 +490,14 @@ def retry_answer_evaluation_endpoint(
     session_id: int,
     attempt_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         attempt, evaluation = InterviewSessionService.retry_evaluation(
             session_id=session_id,
             attempt_id=attempt_id,
             db=db,
+            user_id=current_user.id,
         )
     except ValueError as exc:
         message = str(exc)
@@ -524,8 +546,6 @@ def retry_answer_evaluation_endpoint(
     )
 
 
-
-
 @router.post(
     "/sessions/{session_id}/complete",
     status_code=status.HTTP_200_OK,
@@ -533,11 +553,13 @@ def retry_answer_evaluation_endpoint(
 def complete_interview_session(
     session_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         session = InterviewSessionService.complete_session(
             session_id=session_id,
             db=db,
+            user_id=current_user.id,
         )
     except ValueError as exc:
         message = str(exc)

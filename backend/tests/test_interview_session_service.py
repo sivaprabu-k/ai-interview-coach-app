@@ -3,17 +3,27 @@ from unittest.mock import patch
 from app.models import (
     GeneratedQuestion,
     Interview,
-    Interview,
     QuestionGeneration,
+    User,
 )
 from app.services.interview_session_service import InterviewSessionService
 
 
 def create_interview_with_generation(db_session, include_questions=True):
+    user = User(
+        name="Test User",
+        email="session-test@example.com",
+        hashed_password="test-hashed-password",
+        is_active=True,
+    )
+    db_session.add(user)
+    db_session.flush()
+
     interview = Interview(
         role="Python Developer",
         difficulty="Medium",
         is_deleted=False,
+        user_id=user.id,
     )
     db_session.add(interview)
     db_session.flush()
@@ -49,6 +59,7 @@ def test_create_session_success(db_session):
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     assert session.id is not None
@@ -59,10 +70,13 @@ def test_create_session_success(db_session):
 
 
 def test_create_session_interview_not_found(db_session):
+    user, _ = create_interview_with_generation(db_session)
+
     with pytest.raises(ValueError, match="Interview not found"):
         InterviewSessionService.create_session(
             interview_id=999999,
             db=db_session,
+            user_id=user.user_id,
         )
 
 
@@ -72,30 +86,27 @@ def test_create_session_without_questions(db_session):
         include_questions=False,
     )
 
-    with pytest.raises(
-        ValueError,
-        match="No generated questions found",
-    ):
+    with pytest.raises(ValueError, match="No generated questions found"):
         InterviewSessionService.create_session(
             interview_id=interview.id,
             db=db_session,
+            user_id=interview.user_id,
         )
 
-def test_get_session_details_success(db_session):
-    from app.services.interview_session_service import (
-        InterviewSessionService,
-    )
 
+def test_get_session_details_success(db_session):
     interview, generation = create_interview_with_generation(db_session)
 
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     result = InterviewSessionService.get_session_details(
         session_id=session.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     assert result.id == session.id
@@ -106,19 +117,13 @@ def test_get_session_details_success(db_session):
 
 
 def test_get_session_details_not_found(db_session):
-    import pytest
+    interview, _ = create_interview_with_generation(db_session)
 
-    from app.services.interview_session_service import (
-        InterviewSessionService,
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Interview session not found",
-    ):
+    with pytest.raises(ValueError, match="Interview session not found"):
         InterviewSessionService.get_session_details(
             session_id=999999,
             db=db_session,
+            user_id=interview.user_id,
         )
 
 
@@ -128,15 +133,18 @@ def test_get_interview_sessions_success(db_session):
     first_session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
     second_session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     sessions = InterviewSessionService.get_interview_sessions(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     assert len(sessions) == 2
@@ -147,25 +155,29 @@ def test_get_interview_sessions_success(db_session):
 
 
 def test_get_interview_sessions_interview_not_found(db_session):
+    interview, _ = create_interview_with_generation(db_session)
+
     with pytest.raises(ValueError, match="Interview not found"):
         InterviewSessionService.get_interview_sessions(
             interview_id=999999,
             db=db_session,
+            user_id=interview.user_id,
         )
 
 
 def test_complete_session_early_success(db_session):
-    interview, generation = create_interview_with_generation(
-        db_session,
-        include_questions=True,
-    )
+    interview, _ = create_interview_with_generation(db_session)
+
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
+
     completed_session = InterviewSessionService.complete_session(
         session_id=session.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     assert completed_session.id == session.id
@@ -184,16 +196,20 @@ def test_complete_session_already_completed(db_session):
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
+
     first_result = InterviewSessionService.complete_session(
         session_id=session.id,
         db=db_session,
+        user_id=interview.user_id,
     )
     original_completed_at = first_result.completed_at
 
     second_result = InterviewSessionService.complete_session(
         session_id=session.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     assert second_result.id == session.id
@@ -207,13 +223,14 @@ def test_submit_answer_rejected_for_completed_session(db_session):
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
-
     question = session.generation.questions[0]
 
     InterviewSessionService.complete_session(
         session_id=session.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     with pytest.raises(
@@ -225,6 +242,7 @@ def test_submit_answer_rejected_for_completed_session(db_session):
             generated_question_id=question.id,
             user_answer="This answer should be rejected.",
             db=db_session,
+            user_id=interview.user_id,
         )
 
 
@@ -234,11 +252,13 @@ def test_retry_evaluation_rejected_for_completed_session(db_session):
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     InterviewSessionService.complete_session(
         session_id=session.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     with pytest.raises(
@@ -249,36 +269,31 @@ def test_retry_evaluation_rejected_for_completed_session(db_session):
             session_id=session.id,
             attempt_id=999999,
             db=db_session,
+            user_id=interview.user_id,
         )
 
 
-def test_submit_answer_auto_completes_session(
-    db_session,
-):
-    interview, generation = create_interview_with_generation(
-        db_session,
-        include_questions=True,
-    )
+def test_submit_answer_auto_completes_session(db_session):
+    interview, generation = create_interview_with_generation(db_session)
 
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
-
     question = generation.questions[0]
 
     with patch(
         "app.services.interview_session_service.AnswerEvaluationService"
     ) as mock_evaluator:
-        mock_evaluator.return_value.evaluate_answer.return_value = (
-            None
-        )
+        mock_evaluator.return_value.evaluate_answer.return_value = None
 
         attempt, evaluation = InterviewSessionService.submit_answer(
             session_id=session.id,
             generated_question_id=question.id,
             user_answer="A decorator modifies or extends a function.",
             db=db_session,
+            user_id=interview.user_id,
         )
 
     db_session.refresh(session)
@@ -289,13 +304,18 @@ def test_submit_answer_auto_completes_session(
     mock_evaluator.return_value.evaluate_answer.assert_called_once()
 
 
-def test_submit_answer_keeps_session_in_progress_when_questions_remain(db_session):
+def test_submit_answer_keeps_session_in_progress_when_questions_remain(
+    db_session,
+):
     interview, generation = create_interview_with_generation(db_session)
 
     second_question = GeneratedQuestion(
         generation_id=generation.id,
         question="What is FastAPI?",
-        expected_answer_points=["A Python web framework", "Supports API development"],
+        expected_answer_points=[
+            "A Python web framework",
+            "Supports API development",
+        ],
     )
     db_session.add(second_question)
     db_session.flush()
@@ -303,8 +323,8 @@ def test_submit_answer_keeps_session_in_progress_when_questions_remain(db_sessio
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
-
     first_question = generation.questions[0]
 
     with patch(
@@ -317,6 +337,7 @@ def test_submit_answer_keeps_session_in_progress_when_questions_remain(db_sessio
             generated_question_id=first_question.id,
             user_answer="A decorator modifies another function.",
             db=db_session,
+            user_id=interview.user_id,
         )
 
     db_session.refresh(session)
@@ -326,14 +347,16 @@ def test_submit_answer_keeps_session_in_progress_when_questions_remain(db_sessio
     assert session.completed_at is None
 
 
-def test_submit_answer_does_not_complete_session_when_evaluation_fails(db_session):
+def test_submit_answer_does_not_complete_session_when_evaluation_fails(
+    db_session,
+):
     interview, generation = create_interview_with_generation(db_session)
 
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
-
     question = generation.questions[0]
 
     with patch(
@@ -348,6 +371,7 @@ def test_submit_answer_does_not_complete_session_when_evaluation_fails(db_sessio
             generated_question_id=question.id,
             user_answer="A decorator modifies another function.",
             db=db_session,
+            user_id=interview.user_id,
         )
 
     db_session.refresh(session)
@@ -367,6 +391,7 @@ def test_retry_evaluation_succeeds_after_failed_attempt(db_session):
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
     question = generation.questions[0]
 
@@ -382,6 +407,7 @@ def test_retry_evaluation_succeeds_after_failed_attempt(db_session):
             generated_question_id=question.id,
             user_answer="A decorator modifies another function.",
             db=db_session,
+            user_id=interview.user_id,
         )
 
     assert attempt.evaluation_status == "failed"
@@ -399,6 +425,7 @@ def test_retry_evaluation_succeeds_after_failed_attempt(db_session):
             session_id=session.id,
             attempt_id=original_attempt_id,
             db=db_session,
+            user_id=interview.user_id,
         )
 
     db_session.refresh(session)
@@ -412,16 +439,18 @@ def test_retry_evaluation_succeeds_after_failed_attempt(db_session):
 
 
 def test_get_session_results_with_unanswered_questions(db_session):
-    interview, generation = create_interview_with_generation(db_session)
+    interview, _ = create_interview_with_generation(db_session)
 
     session = InterviewSessionService.create_session(
         interview_id=interview.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     result = InterviewSessionService.get_session_results(
         session_id=session.id,
         db=db_session,
+        user_id=interview.user_id,
     )
 
     assert result["id"] == session.id
@@ -440,6 +469,8 @@ def test_get_session_results_with_unanswered_questions(db_session):
 
 
 def test_get_session_results_not_found(db_session):
+    interview, _ = create_interview_with_generation(db_session)
+
     with pytest.raises(
         ValueError,
         match="Interview session not found",
@@ -447,4 +478,30 @@ def test_get_session_results_not_found(db_session):
         InterviewSessionService.get_session_results(
             session_id=999999,
             db=db_session,
+            user_id=interview.user_id,
+        )
+
+def test_get_session_details_rejects_another_user(db_session):
+    interview, _ = create_interview_with_generation(db_session)
+
+    session = InterviewSessionService.create_session(
+        interview_id=interview.id,
+        db=db_session,
+        user_id=interview.user_id,
+    )
+
+    other_user = User(
+        name="Another User",
+        email="another-user@example.com",
+        hashed_password="test-hashed-password",
+        is_active=True,
+    )
+    db_session.add(other_user)
+    db_session.flush()
+
+    with pytest.raises(ValueError):
+        InterviewSessionService.get_session_details(
+            session_id=session.id,
+            db=db_session,
+            user_id=other_user.id,
         )
