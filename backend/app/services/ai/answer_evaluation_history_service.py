@@ -8,11 +8,14 @@ class AnswerEvaluationHistoryService:
 
     def get_evaluation_history(
         self,
+        user_id: int,
         evaluation_id: int | None = None,
         skip: int = 0,
         limit: int = 10,
     ) -> list[AnswerEvaluation]:
-        query = self.db.query(AnswerEvaluation)
+        query = self.db.query(AnswerEvaluation).filter(
+            AnswerEvaluation.user_id == user_id
+        )
 
         if evaluation_id is not None:
             query = query.filter(AnswerEvaluation.id == evaluation_id)
@@ -30,9 +33,13 @@ class AnswerEvaluationHistoryService:
     def get_evaluation_by_id(
         self,
         evaluation_id: int,
+        user_id: int,
     ) -> AnswerEvaluation | None:
         return (
             self.db.query(AnswerEvaluation)
-            .filter(AnswerEvaluation.id == evaluation_id)
+            .filter(
+                AnswerEvaluation.id == evaluation_id,
+                AnswerEvaluation.user_id == user_id,
+            )
             .first()
         )

@@ -1,10 +1,10 @@
-
 import json
 
 from google import genai
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.models import AnswerAttempt, Interview, InterviewSession
 from app.models.answer_evaluation import AnswerEvaluation
 from app.schemas.answer_evaluation import (
     AnswerEvaluationRequest,
@@ -25,7 +25,37 @@ class AnswerEvaluationService:
         db: Session,
         generated_question_id: int | None = None,
         answer_attempt_id: int | None = None,
+        user_id: int | None = None,
     ) -> AnswerEvaluationResponse:
+
+        if answer_attempt_id is not None:
+            attempt_owner_id = (
+                db.query(Interview.user_id)
+                .join(
+                    InterviewSession,
+                    InterviewSession.interview_id == Interview.id,
+                )
+                .join(
+                    AnswerAttempt,
+                    AnswerAttempt.session_id == InterviewSession.id,
+                )
+                .filter(AnswerAttempt.id == answer_attempt_id)
+                .scalar()
+            )
+
+            if attempt_owner_id is None:
+                raise ValueError("Answer attempt not found.")
+
+            if user_id is not None and user_id != attempt_owner_id:
+                raise ValueError(
+                    "Answer attempt does not belong to this user."
+                )
+
+            user_id = attempt_owner_id
+
+        if user_id is None:
+            raise ValueError("User ID is required to evaluate an answer.")
+
         prompt = f"""
 Evaluate the candidate's interview answer fairly and objectively.
 
@@ -101,6 +131,7 @@ Use empty arrays when there are no strengths or improvements to list.
 
         if evaluation is None:
             evaluation = AnswerEvaluation(
+                user_id=user_id,
                 answer_attempt_id=answer_attempt_id,
                 generated_question_id=generated_question_id,
                 question=request.question,

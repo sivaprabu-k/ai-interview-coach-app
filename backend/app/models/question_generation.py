@@ -12,6 +12,11 @@ class QuestionGeneration(Base):
         primary_key=True,
         index=True,
     )
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     role: Mapped[str] = mapped_column(
         String(100),
         nullable=False,

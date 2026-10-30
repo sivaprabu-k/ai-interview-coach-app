@@ -5,9 +5,7 @@ from unittest.mock import MagicMock, patch
 @patch(
     "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationHistoryService"
 )
-def test_get_answer_evaluation_history_success(
-    mock_service_class, client
-):
+def test_get_answer_evaluation_history_success(mock_service_class, client, auth_headers):
     mock_service = MagicMock()
     mock_service_class.return_value = mock_service
 
@@ -27,7 +25,10 @@ def test_get_answer_evaluation_history_success(
         )
     ]
 
-    response = client.get("/api/v1/answer-evaluations")
+    response = client.get(
+        "/api/v1/answer-evaluations",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
 
@@ -43,14 +44,15 @@ def test_get_answer_evaluation_history_success(
 @patch(
     "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationHistoryService"
 )
-def test_get_answer_evaluation_history_empty(
-    mock_service_class, client
-):
+def test_get_answer_evaluation_history_empty(mock_service_class, client, auth_headers):
     mock_service = MagicMock()
     mock_service_class.return_value = mock_service
     mock_service.get_evaluation_history.return_value = []
 
-    response = client.get("/api/v1/answer-evaluations")
+    response = client.get(
+        "/api/v1/answer-evaluations",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
 
@@ -63,18 +65,20 @@ def test_get_answer_evaluation_history_empty(
     "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationHistoryService"
 )
 def test_get_history_accepts_custom_pagination(
-    mock_service_class, client
+    mock_service_class, client, auth_headers, auth_user
 ):
     mock_service = MagicMock()
     mock_service_class.return_value = mock_service
     mock_service.get_evaluation_history.return_value = []
 
     response = client.get(
-        "/api/v1/answer-evaluations?skip=0&limit=2"
+        "/api/v1/answer-evaluations?skip=0&limit=2",
+        headers=auth_headers,
     )
 
     assert response.status_code == 200
     mock_service.get_evaluation_history.assert_called_once_with(
+        user_id=auth_user.id,
         skip=0,
         limit=2,
     )
@@ -84,34 +88,38 @@ def test_get_history_accepts_custom_pagination(
     "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationHistoryService"
 )
 def test_get_history_accepts_next_page(
-    mock_service_class, client
+    mock_service_class, client, auth_headers, auth_user
 ):
     mock_service = MagicMock()
     mock_service_class.return_value = mock_service
     mock_service.get_evaluation_history.return_value = []
 
     response = client.get(
-        "/api/v1/answer-evaluations?skip=2&limit=2"
+        "/api/v1/answer-evaluations?skip=2&limit=2",
+        headers=auth_headers,
     )
 
     assert response.status_code == 200
     mock_service.get_evaluation_history.assert_called_once_with(
+        user_id=auth_user.id,
         skip=2,
         limit=2,
     )
 
 
-def test_get_history_rejects_negative_skip(client):
+def test_get_history_rejects_negative_skip(client, auth_headers):
     response = client.get(
-        "/api/v1/answer-evaluations?skip=-1&limit=2"
+        "/api/v1/answer-evaluations?skip=-1&limit=2",
+        headers=auth_headers,
     )
 
     assert response.status_code == 422
 
 
-def test_get_history_rejects_limit_above_maximum(client):
+def test_get_history_rejects_limit_above_maximum(client, auth_headers):
     response = client.get(
-        "/api/v1/answer-evaluations?skip=0&limit=101"
+        "/api/v1/answer-evaluations?skip=0&limit=101",
+        headers=auth_headers,
     )
 
     assert response.status_code == 422
@@ -121,7 +129,7 @@ def test_get_history_rejects_limit_above_maximum(client):
     "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationHistoryService"
 )
 def test_get_answer_evaluation_by_id_success(
-    mock_service_class, client
+    mock_service_class, client, auth_headers, auth_user
 ):
     mock_service = MagicMock()
     mock_service_class.return_value = mock_service
@@ -140,7 +148,10 @@ def test_get_answer_evaluation_by_id_success(
         created_at=datetime(2026, 10, 26, tzinfo=timezone.utc),
     )
 
-    response = client.get("/api/v1/answer-evaluations/1")
+    response = client.get(
+        "/api/v1/answer-evaluations/1",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
 
@@ -150,18 +161,26 @@ def test_get_answer_evaluation_by_id_success(
     assert body["data"]["score"] == 85
     assert body["message"] == "Answer evaluation retrieved successfully"
 
+    mock_service.get_evaluation_by_id.assert_called_once_with(
+        1,
+        user_id=auth_user.id,
+    )
+
 
 @patch(
     "app.api.v1.endpoints.answer_evaluation.AnswerEvaluationHistoryService"
 )
 def test_get_answer_evaluation_by_id_not_found(
-    mock_service_class, client
+    mock_service_class, client, auth_headers, auth_user
 ):
     mock_service = MagicMock()
     mock_service_class.return_value = mock_service
     mock_service.get_evaluation_by_id.return_value = None
 
-    response = client.get("/api/v1/answer-evaluations/99999")
+    response = client.get(
+        "/api/v1/answer-evaluations/99999",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 404
 
@@ -169,3 +188,8 @@ def test_get_answer_evaluation_by_id_not_found(
     assert body["status"] is False
     assert body["data"] == {}
     assert body["message"] == "Answer evaluation not found"
+
+    mock_service.get_evaluation_by_id.assert_called_once_with(
+        99999,
+        user_id=auth_user.id,
+    )

@@ -74,7 +74,7 @@ def client(db_session):
 
 
 @pytest.fixture
-def auth_headers(db_session):
+def auth_user(db_session):
     user = User(
         name="Interview Test User",
         email="interview-test@example.com",
@@ -85,6 +85,11 @@ def auth_headers(db_session):
     db_session.add(user)
     db_session.flush()
 
-    token = create_access_token(subject=str(user.id))
+    return user
+
+
+@pytest.fixture
+def auth_headers(auth_user):
+    token = create_access_token(subject=str(auth_user.id))
 
     return {"Authorization": f"Bearer {token}"}
