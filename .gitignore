@@ -33,3 +33,8 @@ dist/
 
 # Uploaded documents
 backend/uploads/
+
+# Node.js frontend
+node_modules/
+.vite/
+*.tsbuildinfo
