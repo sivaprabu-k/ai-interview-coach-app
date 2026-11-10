@@ -2,16 +2,18 @@ import Sidebar from './components/layout/Sidebar'
 import DashboardHeader from './components/dashboard/DashboardHeader'
 import StatsCards from './components/dashboard/StatsCards'
 import PerformanceOverview from './components/dashboard/PerformanceOverview'
+import RecentInterviews from './components/dashboard/RecentInterviews'
 
 function App() {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar />
 
-      <main className="min-w-0 flex-1 p-8">
+      <main className="h-screen min-w-0 flex-1 overflow-y-auto p-8">
         <DashboardHeader />
         <StatsCards />
         <PerformanceOverview />
+        <RecentInterviews />
       </main>
     </div>
   )

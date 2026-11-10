@@ -23,7 +23,7 @@ function Sidebar() {
   const [activeItem, setActiveItem] = useState('Dashboard')
 
   return (
-    <aside className="flex h-screen w-64 flex-col bg-[#171729] px-5 py-6 text-white">
+    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col overflow-y-auto bg-[#171729] px-5 py-6 text-white">
       {/* Logo */}
       <div className="mb-10 flex items-center gap-3 px-2">
         <div className="rounded-xl bg-purple-600 p-2">
@@ -37,7 +37,7 @@ function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-2">
+      <nav className="min-h-0 flex-1 space-y-2">
         <p className="mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
           Menu
         </p>
