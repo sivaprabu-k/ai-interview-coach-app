@@ -3,6 +3,7 @@ import DashboardHeader from './components/dashboard/DashboardHeader'
 import StatsCards from './components/dashboard/StatsCards'
 import PerformanceOverview from './components/dashboard/PerformanceOverview'
 import RecentInterviews from './components/dashboard/RecentInterviews'
+import InterviewResults from './components/dashboard/InterviewResults'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <StatsCards />
         <PerformanceOverview />
         <RecentInterviews />
+        <InterviewResults />
       </main>
     </div>
   )

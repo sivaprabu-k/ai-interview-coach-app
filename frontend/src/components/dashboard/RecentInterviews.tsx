@@ -1,4 +1,6 @@
 import { Eye, CalendarDays } from 'lucide-react'
+import { useState } from 'react'
+import InterviewDetailsModal from './InterviewDetailsModal'
 
 const interviews = [
   {
@@ -36,6 +38,10 @@ const interviews = [
 ]
 
 function RecentInterviews() {
+    const [selectedInterview, setSelectedInterview] = useState<
+        (typeof interviews)[number] | null
+    >(null)
+
   return (
     <section className="mb-8 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
       <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -108,9 +114,10 @@ function RecentInterviews() {
                 <td className="py-4 text-center">
                     <button
                         type="button"
+                        onClick={() => setSelectedInterview(interview)}
                         aria-label={`View ${interview.candidate} interview`}
                         title="View Interview"
-                        className="inline-flex items-center justify-center rounded-lg border border-purple-100 p-2 text-purple-600 transition hover:border-purple-600 hover:bg-purple-600 hover:text-white cursor-pointer"
+                         className="inline-flex items-center justify-center rounded-lg border border-purple-100 p-2 text-purple-600 transition hover:border-purple-600 hover:bg-purple-600 hover:text-white cursor-pointer"
                     >
                         <Eye size={17} />
                     </button>
@@ -120,6 +127,10 @@ function RecentInterviews() {
           </tbody>
         </table>
       </div>
+      <InterviewDetailsModal
+        interview={selectedInterview}
+        onClose={() => setSelectedInterview(null)}
+        />
     </section>
   )
 }
