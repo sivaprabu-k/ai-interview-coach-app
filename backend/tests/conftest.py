@@ -1,4 +1,4 @@
-
+from sqlalchemy import create_engine, text
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -31,8 +31,15 @@ TestingSessionLocal = sessionmaker(
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
-    Base.metadata.create_all(bind=test_engine)
+    with test_engine.begin() as connection:
+        connection.execute(
+            text("CREATE EXTENSION IF NOT EXISTS vector")
+        )
+
+        Base.metadata.create_all(bind=connection)
+
     yield
+
     Base.metadata.drop_all(bind=test_engine)
     test_engine.dispose()
 

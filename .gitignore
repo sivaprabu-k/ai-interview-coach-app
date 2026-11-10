@@ -10,6 +10,7 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+test_files/
 
 # Coverage reports
 htmlcov/
@@ -29,3 +30,6 @@ dist/
 # Local environment files
 .env.local
 .env.*.local
+
+# Uploaded documents
+backend/uploads/
