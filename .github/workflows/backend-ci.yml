@@ -3,9 +3,7 @@ name: Backend CI
 on:
   push:
     branches:
-      - main
-      - dev
-      - feature/github-actions-ci-cd
+        - '**'
   
   pull_request:
     branches:
