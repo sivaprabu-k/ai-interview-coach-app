@@ -14,15 +14,54 @@ import DocumentsPage from './pages/DocumentsPage'
 import CareerProfilePage from './pages/CareerProfilePage'
 import FAQPage from './pages/FAQPage'
 import SettingsPage from './pages/SettingsPage'
+import { useEffect, useState } from 'react'
+import { getDashboardSummary } from './services/dashboardService'
+import type { DashboardSummary } from './types/dashboard'
 
 function Dashboard() {
+  const [summary, setSummary] = useState<DashboardSummary | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const data = await getDashboardSummary()
+        setSummary(data)
+      } catch {
+        setError('Unable to load dashboard data. Please try again.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboard()
+  }, [])
+
   return (
     <>
       <DashboardHeader />
-      <StatsCards />
-      <PerformanceOverview />
-      <RecentInterviews />
-      <InterviewResults />
+
+      {loading && (
+        <p className="py-8 text-center text-gray-500">
+          Loading dashboard...
+        </p>
+      )}
+
+      {!loading && error && (
+        <p className="py-8 text-center text-red-500">
+          {error}
+        </p>
+      )}
+
+      {!loading && !error && summary && (
+        <>
+          <StatsCards summary={summary} />
+          <PerformanceOverview summary={summary} />
+          <RecentInterviews summary={summary} />
+          <InterviewResults evaluation={summary.latest_evaluation} />
+        </>
+      )}
     </>
   )
 }

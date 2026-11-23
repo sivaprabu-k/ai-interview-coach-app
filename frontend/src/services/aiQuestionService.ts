@@ -1,6 +1,7 @@
 import api from './api'
 
 export interface AIQuestion {
+  id: number
   question: string
   expected_answer_points: string[]
 }
@@ -15,6 +16,7 @@ export interface QuestionGenerationRequest {
 }
 
 export interface QuestionGenerationResponse {
+  id: number
   role: string
   questions: AIQuestion[]
 }

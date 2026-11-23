@@ -49,7 +49,7 @@ def create_interview_endpoint(
 
     return global_response_format(
         status_value=True,
-        data={},
+        data=interview_data_response.model_dump(mode="json"),
         status_code=status.HTTP_201_CREATED,
         status_message="Interview created successfully",
     )
@@ -395,7 +395,7 @@ def get_interview_sessions_endpoint(
     except ValueError as exc:
         return global_response_format(
             status_value=False,
-            data={},
+            adta={},
             status_code=status.HTTP_404_NOT_FOUND,
             status_message=str(exc),
         )
