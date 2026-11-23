@@ -308,6 +308,8 @@ def get_interview_session_details(
 
         questions.append({
             "question_id": question.id,
+            "question": question.question,
+            "expected_answer_points": question.expected_answer_points,
             "attempts": [
                 {
                     "id": attempt.id,

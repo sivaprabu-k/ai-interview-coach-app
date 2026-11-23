@@ -41,6 +41,8 @@ class AnswerAttemptResponse(BaseModel):
 
 class SessionQuestionProgressResponse(BaseModel):
     question_id: int
+    question: str
+    expected_answer_points: list[str]
     attempts: list[AnswerAttemptResponse]
     successful_attempts: int
     total_attempts: int

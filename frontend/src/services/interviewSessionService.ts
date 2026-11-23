@@ -69,3 +69,51 @@ export const submitSessionAnswer = async (
 
   return response.data.data
 }
+
+export interface SessionAttempt {
+  id: number
+  generated_question_id: number
+  attempt_number: number
+  user_answer: string
+  evaluation_status: 'pending' | 'succeeded' | 'failed'
+  submitted_at: string
+}
+
+export interface SessionQuestionProgress {
+  question_id: number
+  question: string
+  expected_answer_points: string[]
+  attempts: SessionAttempt[]
+  successful_attempts: number
+  total_attempts: number
+}
+
+export interface InterviewSessionDetail {
+  id: number
+  interview_id: number
+  generation_id: number
+  status: 'in_progress' | 'completed'
+  started_at: string
+  completed_at: string | null
+  questions: SessionQuestionProgress[]
+  total_questions: number
+  completed_questions: number
+  unanswered_questions: number
+  failed_evaluations: number
+}
+
+export const getSessionDetails = async (
+  sessionId: number,
+): Promise<InterviewSessionDetail> => {
+  const response = await api.get(`/sessions/${sessionId}`)
+  return response.data.data
+}
+
+export const retrySessionEvaluation = async (
+  sessionId: number,
+  attemptId: number,
+): Promise<void> => {
+  await api.post(
+    `/sessions/${sessionId}/answers/${attemptId}/retry-evaluation`,
+  )
+}
