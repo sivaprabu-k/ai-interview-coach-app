@@ -32,5 +32,6 @@ jobs:
       - name: Run backend tests
         env:
           PYTHONPATH: backend
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
         run: |
           pytest backend/tests/ -v
