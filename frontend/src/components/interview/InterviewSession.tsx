@@ -7,10 +7,7 @@ import {
   Video,
 } from 'lucide-react'
 
-interface InterviewQuestion {
-  question: string
-  expected_answer_points: string[]
-}
+import type { InterviewQuestion } from '../../types/evaluation'
 
 interface InterviewSessionProps {
   role: string
@@ -28,6 +25,7 @@ interface InterviewSessionProps {
 
 const defaultQuestions: InterviewQuestion[] = [
   {
+    id: 1,
     question: 'Explain the difference between a Python list and a tuple.',
     expected_answer_points: [
       'Lists are mutable, while tuples are immutable.',
@@ -37,6 +35,7 @@ const defaultQuestions: InterviewQuestion[] = [
     ],
   },
   {
+    id: 2,
     question: 'What are Python decorators?',
     expected_answer_points: [
       'Decorators modify or extend function behavior.',
@@ -46,6 +45,7 @@ const defaultQuestions: InterviewQuestion[] = [
     ],
   },
   {
+    id: 3,
     question: 'Explain list comprehension with an example.',
     expected_answer_points: [
       'List comprehension provides a concise way to create lists.',
@@ -55,6 +55,7 @@ const defaultQuestions: InterviewQuestion[] = [
     ],
   },
   {
+    id: 4,
     question: 'What is the difference between shallow copy and deep copy?',
     expected_answer_points: [
       'Shallow copy creates a new outer object.',
@@ -64,6 +65,7 @@ const defaultQuestions: InterviewQuestion[] = [
     ],
   },
   {
+    id: 5,
     question: 'Explain Python generators and yield.',
     expected_answer_points: [
       'Generators produce values lazily.',

@@ -2,45 +2,49 @@ import {
   Video,
   CheckCircle2,
   TrendingUp,
-  CalendarClock,
+  Clock,
 } from 'lucide-react'
+import type { DashboardSummary } from '../../types/dashboard'
 
-const stats = [
-  {
-    title: 'Total Interviews',
-    value: '24',
-    change: '+12%',
-    description: 'from last month',
-    icon: Video,
-    color: 'bg-purple-100 text-purple-600',
-  },
-  {
-    title: 'Completed Interviews',
-    value: '18',
-    change: '+8%',
-    description: 'from last month',
-    icon: CheckCircle2,
-    color: 'bg-green-100 text-green-600',
-  },
-  {
-    title: 'Average Score',
-    value: '85%',
-    change: '+5%',
-    description: 'from last month',
-    icon: TrendingUp,
-    color: 'bg-blue-100 text-blue-600',
-  },
-  {
-    title: 'Upcoming Interviews',
-    value: '06',
-    change: 'Next 7 days',
-    description: 'scheduled interviews',
-    icon: CalendarClock,
-    color: 'bg-orange-100 text-orange-600',
-  },
-]
+interface StatsCardsProps {
+  summary: DashboardSummary
+}
 
-function StatsCards() {
+function StatsCards({ summary }: StatsCardsProps) {
+  const stats = [
+    {
+      title: 'Total Interviews',
+      value: summary.stats.total_interviews.toString(),
+      description: 'Total created interviews',
+      icon: Video,
+      color: 'bg-purple-100 text-purple-600',
+    },
+    {
+      title: 'Completed Interviews',
+      value: summary.stats.completed_interviews.toString(),
+      description: 'Completed sessions',
+      icon: CheckCircle2,
+      color: 'bg-green-100 text-green-600',
+    },
+    {
+      title: 'Average Score',
+      value:
+        summary.stats.average_score !== null
+          ? `${summary.stats.average_score}%`
+          : 'N/A',
+      description: `${summary.stats.total_evaluations} successful evaluations`,
+      icon: TrendingUp,
+      color: 'bg-blue-100 text-blue-600',
+    },
+    {
+      title: 'In Progress Interviews',
+      value: summary.stats.in_progress_interviews.toString(),
+      description: 'Currently active sessions',
+      icon: Clock,
+      color: 'bg-orange-100 text-orange-600',
+    },
+  ]
+
   return (
     <div className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
       {stats.map((stat) => {
@@ -66,13 +70,8 @@ function StatsCards() {
               </div>
             </div>
 
-            <div className="mt-4 flex items-center gap-2 text-xs">
-              <span className="font-semibold text-green-600">
-                {stat.change}
-              </span>
-              <span className="text-gray-400">
-                {stat.description}
-              </span>
+            <div className="mt-4 text-xs text-gray-400">
+              {stat.description}
             </div>
           </div>
         )

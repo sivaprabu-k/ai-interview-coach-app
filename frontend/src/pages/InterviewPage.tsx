@@ -11,7 +11,7 @@ import {
 
 import InterviewSession from '../components/interview/InterviewSession'
 import InterviewResults from '../components/dashboard/InterviewResults'
-import { evaluateAnswer } from '../services/answerEvaluationService'
+// import { evaluateAnswer } from '../services/answerEvaluationService'
 import {
   getDocuments,
   generateDocumentInterview,
@@ -25,6 +25,7 @@ import type {
 import { getUserProfile } from '../services/profileService'
 import type { UserProfile } from '../types/profile'
 import { generateAIQuestions } from '../services/aiQuestionService'
+import { createInterview, createInterviewSession, submitSessionAnswer} from '../services/interviewSessionService'
 
 
 function InterviewPage() {
@@ -55,6 +56,7 @@ function InterviewPage() {
     useState<InterviewEvaluation | null>(null)
 
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [sessionId, setSessionId] = useState<number | null>(null)
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -143,17 +145,31 @@ function InterviewPage() {
         Advanced: 'hard',
       }
 
-      const response = await generateAIQuestions({
+      const mappedDifficulty = difficultyMapping[difficulty] ?? 'medium'
+
+      // Step 1: Create interview
+      const interview = await createInterview({
+        role,
+        difficulty: mappedDifficulty,
+      })
+
+      // Step 2: Generate questions linked to the interview
+      await generateAIQuestions({
         role,
         experience_years: userProfile?.years_of_experience ?? undefined,
         skills: userProfile?.technical_skills?.length
           ? userProfile.technical_skills
           : undefined,
-        difficulty: difficultyMapping[difficulty] ?? 'medium',
+        difficulty: mappedDifficulty,
+        interview_id: interview.id,
         number_of_questions: Number(questionCount),
       })
 
-      setGeneratedQuestions(response.questions)
+      // Create the interview session using the generated questions.
+      const session = await createInterviewSession(interview.id)
+
+      setSessionId(session.id)
+      setGeneratedQuestions(session.questions)
       setShowSetup(false)
       setShowSession(true)
     } catch (error) {
@@ -219,27 +235,42 @@ function InterviewPage() {
     setEvaluation(null)
 
     try {
+      if (sessionId === null) {
+        throw new Error('Interview session not found. Please start again.')
+      }
+
       const answeredQuestions = questions
         .map((item, index) => ({
           ...item,
           user_answer: answers[index]?.trim() ?? '',
           index,
         }))
-        .filter((item) => item.user_answer.length > 0)
 
-      if (answeredQuestions.length === 0) {
-        throw new Error('Please answer at least one question.')
+      if (
+        answeredQuestions.length === 0 ||
+        answeredQuestions.some((item) => !item.user_answer)
+      ) {
+        throw new Error('Please answer all questions before completing the interview.')
       }
 
-      const results = await Promise.all(
-        answeredQuestions.map((item) =>
-          evaluateAnswer({
-            question: item.question,
-            expected_answer_points: item.expected_answer_points,
-            user_answer: item.user_answer,
-          }),
-        ),
-      )
+      const results = []
+
+      for (const item of answeredQuestions) {
+        if (typeof item.id !== 'number') {
+          throw new Error('A valid database question ID is missing.')
+        }
+
+        const response = await submitSessionAnswer(sessionId, {
+          generated_question_id: item.id,
+          user_answer: item.user_answer,
+        })
+
+        if (!response.evaluation) {
+          throw new Error('Answer evaluation failed.')
+        }
+
+        results.push(response.evaluation)
+      }
 
       const overallScore = Math.round(
         results.reduce((total, item) => total + item.score, 0) /

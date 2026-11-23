@@ -123,7 +123,19 @@ def generate_questions(
 
         return global_response_format(
             status_value=True,
-            data=result.model_dump(mode="json"),
+            data={
+                "id": generation.id,
+                "role": generation.role,
+                "difficulty": generation.difficulty,
+                "questions": [
+                    {
+                        "id": question.id,
+                        "question": question.question,
+                        "expected_answer_points": question.expected_answer_points,
+                    }
+                    for question in generation.questions
+                ],
+            },
             status_code=status.HTTP_200_OK,
             status_message="AI interview questions generated successfully",
         )

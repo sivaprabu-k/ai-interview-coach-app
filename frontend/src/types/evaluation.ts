@@ -20,6 +20,7 @@ export interface ApiResponse<T> {
 }
 
 export interface InterviewQuestion {
+  id?: number
   question: string
   expected_answer_points: string[]
 }
