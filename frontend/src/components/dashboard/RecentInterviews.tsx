@@ -5,9 +5,10 @@ import type { DashboardRecentSession, DashboardSummary } from '../../types/dashb
 
 interface RecentInterviewsProps {
   summary: DashboardSummary
+  onRefresh: () => Promise<void>
 }
 
-function RecentInterviews({ summary }: RecentInterviewsProps) {
+function RecentInterviews({ summary, onRefresh }: RecentInterviewsProps) {
   const [selectedInterview, setSelectedInterview] =
     useState<DashboardRecentSession | null>(null)
 
@@ -127,7 +128,10 @@ function RecentInterviews({ summary }: RecentInterviewsProps) {
 
       <InterviewDetailsModal
         interview={selectedInterview}
-        onClose={() => setSelectedInterview(null)}
+        onClose={() => {
+          setSelectedInterview(null)
+          void onRefresh()
+        }}
       />
     </section>
   )

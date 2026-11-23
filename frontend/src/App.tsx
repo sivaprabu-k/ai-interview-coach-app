@@ -14,7 +14,7 @@ import DocumentsPage from './pages/DocumentsPage'
 import CareerProfilePage from './pages/CareerProfilePage'
 import FAQPage from './pages/FAQPage'
 import SettingsPage from './pages/SettingsPage'
-import { useEffect, useState } from 'react'
+import {useCallback, useEffect, useState } from 'react'
 import { getDashboardSummary } from './services/dashboardService'
 import type { DashboardSummary } from './types/dashboard'
 
@@ -23,20 +23,25 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const refreshDashboard = useCallback(async () => {
+    try {
+      const data = await getDashboardSummary()
+      setSummary(data)
+      setError('')
+    } catch {
+      setError('Unable to load dashboard data. Please try again.')
+    }
+  }, [])
+
   useEffect(() => {
     const fetchDashboard = async () => {
-      try {
-        const data = await getDashboardSummary()
-        setSummary(data)
-      } catch {
-        setError('Unable to load dashboard data. Please try again.')
-      } finally {
-        setLoading(false)
-      }
+      setLoading(true)
+      await refreshDashboard()
+      setLoading(false)
     }
 
     fetchDashboard()
-  }, [])
+  }, [refreshDashboard])
 
   return (
     <>
@@ -58,7 +63,7 @@ function Dashboard() {
         <>
           <StatsCards summary={summary} />
           <PerformanceOverview summary={summary} />
-          <RecentInterviews summary={summary} />
+          <RecentInterviews summary={summary} onRefresh={refreshDashboard} />
           <InterviewResults evaluation={summary.latest_evaluation} />
         </>
       )}
