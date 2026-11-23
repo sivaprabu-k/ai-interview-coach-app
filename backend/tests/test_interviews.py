@@ -48,7 +48,9 @@ def test_create_interview(client, auth_headers):
     result = response.json()
 
     assert result["status"] is True
-    assert result["data"] == {}
+    assert result["data"]["id"] is not None
+    assert result["data"]["role"] == "Python Developer"
+    assert result["data"]["difficulty"] == "medium"
     assert result["status_code"] == 201
     assert result["message"] == "Interview created successfully"
 
