@@ -10,6 +10,7 @@ An AI-powered interview preparation platform designed to help developers practic
 - Track interview preparation progress and identify improvement areas.
 - Maintain a personalized career profile.
 - Generate interview questions based on saved career details.
+- Support resumable interview sessions and answer attempts.
 - Build a full-stack application using modern backend, frontend, and AI technologies.
 
 ## Technology Stack
@@ -64,6 +65,7 @@ ai-interview-coach/
 │   ├── requirements.txt
 │   └── README.md
 ├── frontend/
+├── .github/
 ├── .gitignore
 └── README.md
 ```
@@ -100,6 +102,13 @@ ai-interview-coach/
 - [x] Support fractional years of experience.
 - [x] Support configurable question generation from 1 to 20 questions.
 - [x] Store resolved question-generation details in interview history.
+- [x] Implement interview session detail retrieval.
+- [x] Retrieve question-level progress and previous answer attempts.
+- [x] Include expected answer points in session question details.
+- [x] Support answer submission for individual session questions.
+- [x] Implement answer evaluation retry functionality.
+- [x] Automatically complete interview sessions when all questions have successful evaluations.
+- [x] Implement session ownership and authorization checks.
 
 ### Career Profile Module
 
@@ -124,6 +133,18 @@ ai-interview-coach/
 - [x] Validate the requested number of generated questions.
 - [x] Store generated questions in question-generation history.
 - [x] Verify generated questions through the frontend interview workflow.
+
+### Interview Session Management Module
+
+- [x] Implement interview session creation.
+- [x] Implement session detail retrieval.
+- [x] Track individual question progress.
+- [x] Display expected answer points for each question.
+- [x] Store and retrieve multiple answer attempts.
+- [x] Track answer evaluation status: pending, succeeded, and failed.
+- [x] Track successful and total attempts for each question.
+- [x] Support retrying failed answer evaluations.
+- [x] Automatically mark sessions as completed after all questions are successfully evaluated.
 
 ### Document-Based RAG Module
 
@@ -169,17 +190,18 @@ ai-interview-coach/
 - [x] Display current question number and total question count.
 - [x] Implement a dynamic progress percentage and progress bar.
 - [x] Verify the interview generation workflow and frontend production build.
+- [x] Implement the Interview Details modal.
+- [x] Display interview questions, expected answer points, and previous attempts.
+- [x] Display question-level completion and evaluation statuses.
+- [x] Implement answer submission from the session details interface.
+- [x] Implement retry evaluation from the session details interface.
+- [x] Integrate session details retrieval with the frontend.
+- [x] Automatically refresh dashboard data when the details modal closes.
+- [x] Verify the frontend production build after session management changes.
 - [ ] Build the document upload and listing interface.
-- [ ] Integrate document-based question answering.
+- [ ] Integrate document-based question answering into the frontend.
 
-### Deployment and DevOps
-
-- [ ] Configure Docker for backend and frontend.
-- [ ] Add GitHub Actions CI/CD workflows.
-- [ ] Perform end-to-end testing.
-- [ ] Deploy the application.
-
-## Backend Testing Status
+### Backend Testing Status
 
 - [x] Initial backend tests.
 - [x] Authentication and interview module tests.
@@ -194,33 +216,65 @@ ai-interview-coach/
 
 **Latest previously recorded complete backend test result: 100 passed.**
 
-The newly implemented Career Profile and question-generation integration was also manually verified through the API and frontend. The frontend production build succeeded after the latest interview UI changes.
+The frontend production build also succeeded after the latest interview session management and dashboard refresh changes.
+
+Note: The complete backend test suite should be run again after the latest changes to establish a new verified test result.
+
+## Deployment and DevOps
+
+- [x] Configure Git repository and GitHub remote.
+- [ ] Configure Docker for backend and frontend.
+- [ ] Create GitHub Actions workflow for backend CI.
+- [ ] Create GitHub Actions workflow for frontend CI.
+- [ ] Configure automated build and test validation.
+- [ ] Configure continuous deployment.
+- [ ] Perform end-to-end testing.
+- [ ] Deploy the application.
 
 ## Project Status
 
-The backend has implemented its core interview preparation functionality, authentication, database integration, document-based RAG capabilities, performance insights, and personalized Career Profile management.
+The AI Interview Coach application has implemented its core interview preparation functionality, authentication, database integration, document-based RAG capabilities, performance insights, and personalized Career Profile management.
 
 The Career Profile module allows users to maintain their professional summary, experience, technical skills, target roles, and preferred interview difficulty.
 
-AI question generation now integrates with the saved Career Profile. When generating questions, the application can automatically use the user's saved role, experience, technical skills, and preferred difficulty. Users can also override these defaults during interview setup.
+AI question generation integrates with the saved Career Profile. When generating questions, the application can automatically use the user's saved role, experience, technical skills, and preferred difficulty. Users can also override these defaults during interview setup.
 
 The question-generation interface supports selecting 5, 10, 15, or 20 questions. Generated questions are displayed dynamically in the interview session, with a progress indicator showing the current question, total question count, and completion percentage.
 
+The interview session management functionality supports retrieving session details, tracking question-level progress, storing multiple answer attempts, submitting answers, and retrying failed evaluations. Sessions are automatically marked as completed when all questions have successful evaluations.
+
+The frontend includes an Interview Details modal that displays session questions, expected answer points, previous attempts, and evaluation statuses. Candidates can submit answers and retry failed evaluations directly from this interface.
+
+The dashboard automatically refreshes its data when the Interview Details modal closes, allowing updated session completion status to appear without manually refreshing the browser.
+
 The document Q&A module supports uploading PDF/DOCX files, extracting and embedding their content, retrieving relevant information using PostgreSQL pgvector, and generating context-based answers using Gemini.
 
-The frontend now includes authentication, dashboard, interview workflows, interview history, performance insights, Career Profile management, and dynamic AI question generation.
+The frontend currently includes authentication, dashboard, interview workflows, interview history, performance insights, Career Profile management, dynamic AI question generation, and resumable interview session functionality.
 
-The next development phase focuses on completing document management and document-based Q&A frontend integration, followed by Docker configuration, CI/CD, end-to-end testing, and deployment.
+The current development focus is completing document management and document-based Q&A frontend integration, followed by Docker configuration, GitHub Actions CI/CD, end-to-end testing, and deployment.
 
 This project is under active development, with a focus on clean architecture, testing, and practical AI engineering skills.
 
 ## Next Development Priorities
 
-1. Complete document upload and listing UI.
-2. Integrate document-based question answering into the frontend.
-3. Verify complete interview and document workflows.
+1. Commit and push the completed resumable interview session feature.
+2. Complete document upload and listing UI.
+3. Integrate document-based question answering into the frontend.
 4. Run the complete backend test suite and frontend production build.
 5. Configure Docker for the application.
-6. Implement GitHub Actions CI/CD.
-7. Perform end-to-end testing.
-8. Deploy the application.
+6. Implement GitHub Actions CI workflows for backend and frontend.
+7. Configure continuous deployment.
+8. Perform end-to-end testing.
+9. Deploy the application.
+
+## V2 Roadmap
+
+- [ ] Implement audio-based interviews with microphone recording.
+- [ ] Integrate speech-to-text transcription.
+- [ ] Evaluate answers generated from audio transcripts.
+- [ ] Implement video-based interviews with camera and microphone recording.
+- [ ] Integrate video upload and audio extraction.
+- [ ] Explore optional speaking-performance analytics.
+- [ ] Improve interview reporting and candidate feedback.
+
+Audio and Video options are present in the interview setup UI, but recording, transcription, and processing functionality are planned for V2.
